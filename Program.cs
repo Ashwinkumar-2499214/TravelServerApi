@@ -1,0 +1,97 @@
+
+using Microsoft.EntityFrameworkCore;
+using TravelEaseServer.Repository.Implementation;
+using TravelEaseServer.Repository.Interface;
+using TravelEaseServer.Service.Implementation;
+using TravelEaseServer.Service.Interface;
+
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+builder.Services.AddOpenApi();
+
+// JWT Authentication
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = "Bearer";
+    options.DefaultChallengeScheme = "Bearer";
+}).AddJwtBearer("Bearer", options =>
+{
+    var jwtSecret = builder.Configuration["Auth:JwtSecret"];
+    if (string.IsNullOrWhiteSpace(jwtSecret))
+    {
+        throw new InvalidOperationException("Missing configuration: Auth:JwtSecret");
+    }
+
+    options.RequireHttpsMetadata = false;
+    options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtSecret)),
+        ValidateIssuer = false,
+        ValidateAudience = false,
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.FromSeconds(30)
+    };
+});
+
+builder.Services.AddAuthorization();
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IPartnerRepository, PartnerRepository>();
+builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
+builder.Services.AddScoped<IBookingRepository, BookingRepository>();
+builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
+builder.Services.AddScoped<IItineraryRepository, ItineraryRepository>();
+builder.Services.AddScoped<IInvoiceRepository, InvoiceRepository>();
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddScoped<IComplianceRepository, ComplianceRepository>();
+builder.Services.AddScoped<IAnalyticsRepository, AnalyticsRepository>();
+builder.Services.AddScoped<IAuthenticationRepository, AuthenticationRepository>();
+
+builder.Services.AddScoped<IBookingService, BookingService>();
+builder.Services.AddScoped<IPartnerService, PartnerService>();
+builder.Services.AddScoped<IInventoryService, InventoryService>();
+builder.Services.AddScoped<IReservationService, ReservationService>();
+builder.Services.AddScoped<IItineraryService, ItineraryService>();
+builder.Services.AddScoped<IInvoiceService, InvoiceService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IComplianceService, ComplianceService>();
+builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", builder =>
+    {
+        builder.AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
+});
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+}
+
+app.UseHttpsRedirection();
+app.UseCors("AllowAll");
+
+app.UseExceptionHandler(opt => opt.Run(TravelEaseServer.Middleware.GlobalExceptionHandler.HandleAsync));
+
+app.UseAuthorization();
+app.MapControllers();
+
+app.Run();
+

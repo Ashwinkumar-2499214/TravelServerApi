@@ -1,0 +1,26 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace TravelEaseServer.Model
+{
+    public class Booking
+    {
+        [Key]
+        public long BookingId { get; set; }
+        public long UserId { get; set; }
+        public long PartnerId { get; set; }
+        public long InventoryId { get; set; }
+        public string ItemType { get; set; }
+        public DateTime BookingDate { get; set; }
+        public int Status { get; set; }
+        public decimal Amount { get; set; }
+        public DateTime CreatedDate { get; set; }
+        public DateTime? ModifiedDate { get; set; }
+
+        public virtual User User { get; set; }
+        public virtual Partner Partner { get; set; }
+        public virtual Inventory Inventory { get; set; }
+        public virtual ICollection<Reservation> Reservations { get; set; } = new List<Reservation>();
+        public virtual ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
+        public virtual ICollection<ItineraryBooking> ItineraryBookings { get; set; } = new List<ItineraryBooking>();
+    }
+}
