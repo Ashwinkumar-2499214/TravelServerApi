@@ -1,191 +1,118 @@
 using Microsoft.EntityFrameworkCore;
-using TravelEaseServer.Dto;
 using TravelEaseServer.Model;
 using TravelEaseServer.Repository.Interface;
 
-namespace TravelEaseServer.Repository.Implementation
+namespace TravelEaseServer.Repository.Implementation;
+
+public class NotificationRepository : INotificationRepository
 {
-    public class NotificationRepository : INotificationRepository
+    private readonly AppDbContext _context;
+
+    public NotificationRepository(AppDbContext context)
     {
-        private readonly AppDbContext _context;
+        _context = context;
+    }
 
-        public NotificationRepository(AppDbContext context)
+    public async Task<Notification> CreateNotificationAsync(Notification notification)
+    {
+        _context.Notifications.Add(notification);
+        await _context.SaveChangesAsync();
+        return notification;
+    }
+
+    public async Task<Notification?> GetNotificationByIdAsync(long notificationId)
+    {
+        return await _context.Notifications
+            .AsNoTracking()
+            .FirstOrDefaultAsync(n => n.NotificationId == notificationId);
+    }
+
+    public async Task<IEnumerable<Notification>> GetAllNotificationsAsync(long? userId, int? category, int? status, int pageNumber, int pageSize)
+    {
+        var query = _context.Notifications.AsNoTracking();
+
+        if (userId.HasValue)
         {
-            _context = context;
+            query = query.Where(n => n.UserId == userId.Value);
         }
 
-        public async Task<NotificationResponseDto> CreateNotificationAsync(Notification notification)
+        if (category.HasValue)
         {
-            try
-            {
-                _context.Notifications.Add(notification);
-                await _context.SaveChangesAsync();
-                return MapNotificationToDto(notification);
-            }
-            catch (DbUpdateException ex)
-            {
-                throw new InvalidOperationException("Error creating notification in database.", ex);
-            }
+            query = query.Where(n => n.Category == category.Value);
         }
 
-        public async Task<NotificationResponseDto> GetNotificationByIdAsync(long notificationId)
+        if (status.HasValue)
         {
-            try
-            {
-                var notification = await _context.Notifications
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(n => n.NotificationId == notificationId);
-
-                return notification != null ? MapNotificationToDto(notification) : null;
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Error retrieving notification with ID {notificationId}.", ex);
-            }
+            query = query.Where(n => n.Status == status.Value);
         }
 
-        public async Task<IEnumerable<NotificationResponseDto>> GetAllNotificationsAsync(NotificationSearchDto searchDto)
+        int skip = (pageNumber - 1) * pageSize;
+
+        return await query
+            .OrderByDescending(n => n.CreatedDate)
+            .Skip(skip)
+            .Take(pageSize)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Notification>> GetNotificationsByUserIdAsync(long userId)
+    {
+        return await _context.Notifications
+            .AsNoTracking()
+            .Where(n => n.UserId == userId)
+            .OrderByDescending(n => n.CreatedDate)
+            .ToListAsync();
+    }
+
+    public async Task<bool> DeleteNotificationAsync(long notificationId)
+    {
+        var notification = await _context.Notifications.FirstOrDefaultAsync(n => n.NotificationId == notificationId);
+        if (notification == null)
         {
-            try
-            {
-                var query = _context.Notifications.AsNoTracking();
-
-                // Apply filters
-                if (searchDto.UserId.HasValue)
-                {
-                    query = query.Where(n => n.UserId == searchDto.UserId.Value);
-                }
-
-                if (searchDto.Category.HasValue)
-                {
-                    query = query.Where(n => n.Category == searchDto.Category.Value);
-                }
-
-                if (searchDto.Status.HasValue)
-                {
-                    query = query.Where(n => n.Status == searchDto.Status.Value);
-                }
-
-                // Apply pagination
-                int skip = (searchDto.PageNumber - 1) * searchDto.PageSize;
-                var notifications = await query
-                    .OrderByDescending(n => n.CreatedDate)
-                    .Skip(skip)
-                    .Take(searchDto.PageSize)
-                    .ToListAsync();
-
-                return notifications.Select(MapNotificationToDto);
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException("Error retrieving notifications.", ex);
-            }
+            return false;
         }
 
-        public async Task<IEnumerable<NotificationResponseDto>> GetNotificationsByUserIdAsync(long userId)
-        {
-            try
-            {
-                var notifications = await _context.Notifications
-                    .AsNoTracking()
-                    .Where(n => n.UserId == userId)
-                    .OrderByDescending(n => n.CreatedDate)
-                    .ToListAsync();
+        _context.Notifications.Remove(notification);
+        await _context.SaveChangesAsync();
+        return true;
+    }
 
-                return notifications.Select(MapNotificationToDto);
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Error retrieving notifications for user with ID {userId}.", ex);
-            }
+    public async Task<Notification?> MarkAsReadAsync(long notificationId)
+    {
+        var notification = await _context.Notifications.FirstOrDefaultAsync(n => n.NotificationId == notificationId);
+        if (notification == null)
+        {
+            return null;
         }
 
-        public async Task<bool> DeleteNotificationAsync(long notificationId)
-        {
-            try
-            {
-                var notification = await _context.Notifications.FirstOrDefaultAsync(n => n.NotificationId == notificationId);
-                if (notification == null)
-                {
-                    return false;
-                }
+        notification.Status = 1;
+        notification.ReadDate = DateTime.UtcNow;
 
-                _context.Notifications.Remove(notification);
-                await _context.SaveChangesAsync();
-                return true;
-            }
-            catch (DbUpdateException ex)
-            {
-                throw new InvalidOperationException($"Error deleting notification with ID {notificationId}.", ex);
-            }
+        _context.Notifications.Update(notification);
+        await _context.SaveChangesAsync();
+
+        return notification;
+    }
+
+    public async Task<bool> MarkAllAsReadAsync(long userId)
+    {
+        var notifications = await _context.Notifications
+            .Where(n => n.UserId == userId && n.Status == 0)
+            .ToListAsync();
+
+        if (notifications.Count == 0)
+        {
+            return false;
         }
 
-        public async Task<NotificationResponseDto> MarkAsReadAsync(long notificationId)
+        foreach (var notification in notifications)
         {
-            try
-            {
-                var notification = await _context.Notifications.FirstOrDefaultAsync(n => n.NotificationId == notificationId);
-                if (notification == null)
-                {
-                    throw new KeyNotFoundException($"Notification with ID {notificationId} not found.");
-                }
-
-                notification.Status = 1; // Assuming 1 is read status
-                notification.ReadDate = DateTime.UtcNow;
-
-                _context.Notifications.Update(notification);
-                await _context.SaveChangesAsync();
-
-                return MapNotificationToDto(notification);
-            }
-            catch (DbUpdateException ex)
-            {
-                throw new InvalidOperationException($"Error marking notification as read with ID {notificationId}.", ex);
-            }
+            notification.Status = 1;
+            notification.ReadDate = DateTime.UtcNow;
         }
 
-        public async Task<bool> MarkAllAsReadAsync(long userId)
-        {
-            try
-            {
-                var notifications = await _context.Notifications
-                    .Where(n => n.UserId == userId && n.Status == 0)
-                    .ToListAsync();
-
-                if (notifications.Count == 0)
-                {
-                    return false;
-                }
-
-                foreach (var notification in notifications)
-                {
-                    notification.Status = 1; // Mark as read
-                    notification.ReadDate = DateTime.UtcNow;
-                }
-
-                _context.Notifications.UpdateRange(notifications);
-                await _context.SaveChangesAsync();
-
-                return true;
-            }
-            catch (DbUpdateException ex)
-            {
-                throw new InvalidOperationException($"Error marking all notifications as read for user with ID {userId}.", ex);
-            }
-        }
-
-        private NotificationResponseDto MapNotificationToDto(Notification notification)
-        {
-            return new NotificationResponseDto
-            {
-                NotificationId = notification.NotificationId,
-                UserId = notification.UserId,
-                Message = notification.Message,
-                Category = notification.Category,
-                Status = notification.Status,
-                CreatedDate = notification.CreatedDate,
-                ReadDate = notification.ReadDate
-            };
-        }
+        _context.Notifications.UpdateRange(notifications);
+        await _context.SaveChangesAsync();
+        return true;
     }
 }

@@ -4,56 +4,65 @@ using TravelEaseServer.Constant;
 using TravelEaseServer.Dto;
 using TravelEaseServer.Service.Interface;
 
-namespace TravelEaseServer.Controllers
+namespace TravelEaseServer.Controllers;
+
+[ApiController]
+[Route("api/v1/[controller]")]
+
+public class AuthenticationController : ControllerBase
 {
-    [ApiController]
-    [Route("api/v1/[controller]")]
-    public class AuthenticationController : ControllerBase
+    private readonly IAuthenticationService _authenticationService;
+
+    public AuthenticationController(IAuthenticationService authenticationService)
     {
-        private readonly IAuthenticationService _authenticationService;
+        _authenticationService = authenticationService;
+    }
 
-        public AuthenticationController(IAuthenticationService authenticationService)
+    [HttpPost("login")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Login([FromBody] LoginRequestDto loginDto)
+    {
+        if (loginDto == null)
         {
-            _authenticationService = authenticationService;
+            return BadRequest(new { message = GeneralConstants.InvalidInput });
         }
 
-        [HttpPost("login")]
-        [AllowAnonymous]
-        public async Task<IActionResult> Login([FromBody] LoginRequestDto loginDto)
-        {
-            if (loginDto == null)
-                return BadRequest(new { message = GeneralConstants.InvalidInput });
+        var data = await _authenticationService.LoginAsync(loginDto);
 
-            var result = await _authenticationService.LoginAsync(loginDto);
-            return Ok(new { message = GeneralConstants.OperationSuccess, data = result });
+        return data != null
+            ? Ok(new { message = GeneralConstants.OperationSuccess, data })
+            : BadRequest(new { message = AuthConstants.UnauthorizedAccess });
+    }
+
+    [HttpPost("logout")]
+    [Authorize]
+    public async Task<IActionResult> Logout([FromBody] LogoutRequestDto logoutDto)
+    {
+        if (logoutDto == null)
+        {
+            return BadRequest(new { message = GeneralConstants.InvalidInput });
         }
 
-        [HttpPost("logout")]
-        [Authorize]
-        public async Task<IActionResult> Logout([FromBody] LogoutRequestDto logoutDto)
+        var result = await _authenticationService.LogoutAsync(logoutDto);
+
+        return result
+            ? Ok(new { message = GeneralConstants.OperationSuccess })
+            : BadRequest(new { message = AuthConstants.UnauthorizedAccess });
+    }
+
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ResetPassword([FromBody] PasswordResetDto resetDto)
+    {
+        if (resetDto == null)
         {
-            if (logoutDto == null)
-                return BadRequest(new { message = GeneralConstants.InvalidInput });
-
-            var ok = await _authenticationService.LogoutAsync(logoutDto);
-            if (!ok)
-                return BadRequest(new { message = AuthConstants.UnauthorizedAccess });
-
-            return Ok(new { message = GeneralConstants.OperationSuccess });
+            return BadRequest(new { message = GeneralConstants.InvalidInput });
         }
 
-        [HttpPost("reset-password")]
-        [AllowAnonymous]
-        public async Task<IActionResult> ResetPassword([FromBody] PasswordResetDto resetDto)
-        {
-            if (resetDto == null)
-                return BadRequest(new { message = GeneralConstants.InvalidInput });
+        var result = await _authenticationService.ResetPasswordAsync(resetDto);
 
-            var ok = await _authenticationService.ResetPasswordAsync(resetDto);
-            if (!ok)
-                return BadRequest(new { message = AuthConstants.PasswordResetFailed });
-
-            return Ok(new { message = AuthConstants.PasswordResetSuccess });
-        }
+        return result
+            ? Ok(new { message = AuthConstants.PasswordResetSuccess })
+            : BadRequest(new { message = AuthConstants.PasswordResetFailed });
     }
 }

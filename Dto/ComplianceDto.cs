@@ -43,8 +43,8 @@ namespace TravelEaseServer.Dto
     public class AuditLogSearchDto
     {
         public long? UserId { get; set; }
-        public required string EntityType { get; set; }
-        public required string Action { get; set; }
+        public  string EntityType { get; set; }
+        public  string Action { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
         public int PageNumber { get; set; } = 1;

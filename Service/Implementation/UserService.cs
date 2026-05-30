@@ -47,11 +47,7 @@ namespace TravelEaseServer.Service.Implementation
 
         public async Task<UserResponseDto> UpdateUserAsync(long userId, UserRequestDto userDto)
         {
-            // Preserve existing password hash; PasswordHash is a required member on the model.
-            // IUserRepository.GetUserByIdAsync returns UserResponseDto, so we cannot read PasswordHash from it.
-            // For now, keep the password hash unchanged by re-hydrating it from the existing user entity via Update flow:
-            // - CreateUserAsync already sets PasswordHash from plaintext password
-            // - UpdateUserAsync should only update non-password fields
+         
             var user = new User
             {
                 UserId = userId,
@@ -59,9 +55,6 @@ namespace TravelEaseServer.Service.Implementation
                 Email = userDto.Email,
                 Phone = userDto.Phone,
                 Role = userDto.Role,
-                // NOTE: If password cannot be updated via this endpoint, PasswordHash must still be provided.
-                // We intentionally do NOT overwrite the PasswordHash here; repository update must preserve it.
-                // To satisfy required member, temporarily set it to an empty string. (Will be refined once repository update logic is verified.)
                 PasswordHash = string.Empty,
                 ModifiedDate = DateTime.UtcNow
             };

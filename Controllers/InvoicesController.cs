@@ -3,63 +3,106 @@ using TravelEaseServer.Constant;
 using TravelEaseServer.Dto;
 using TravelEaseServer.Service.Interface;
 
-namespace TravelEaseServer.Controllers
+namespace TravelEaseServer.Controllers;
+
+[ApiController]
+[Route("api/v1/[controller]")]
+public class InvoicesController : ControllerBase
 {
-    [ApiController]
-    [Route("api/v1/[controller]")]
-    public class InvoicesController : ControllerBase
+    private readonly IInvoiceService _invoiceService;
+
+    public InvoicesController(IInvoiceService invoiceService)
     {
-        private readonly IInvoiceService _invoiceService;
+        _invoiceService = invoiceService;
+    }
 
-        public InvoicesController(IInvoiceService invoiceService)
+    [HttpGet]
+    public async Task<IActionResult> GetAllInvoices([FromQuery] InvoiceSearchDto searchDto)
+    {
+        if (!ModelState.IsValid || searchDto == null)
         {
-            _invoiceService = invoiceService;
+            return BadRequest(new { message = GeneralConstants.InvalidInput });
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAllInvoices([FromQuery] InvoiceSearchDto searchDto)
+        var data = await _invoiceService.GetAllInvoicesAsync(searchDto);
+
+        return data != null
+            ? Ok(new { message = GeneralConstants.OperationSuccess, data })
+            : NotFound(new { message = InvoiceConstants.InvoiceNotFound });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> CreateInvoice([FromBody] InvoiceRequestDto invoiceDto)
+    {
+        if (!ModelState.IsValid || invoiceDto == null)
         {
-            return (ModelState.IsValid && searchDto != null)
-                ? Ok(new { message = GeneralConstants.OperationSuccess, data = await _invoiceService.GetAllInvoicesAsync(searchDto) })
-                : BadRequest(new { message = GeneralConstants.InvalidInput });
+            return BadRequest(new { message = GeneralConstants.InvalidInput });
         }
 
-        [HttpPost]
-        public async Task<IActionResult> CreateInvoice([FromBody] InvoiceRequestDto invoiceDto)
+        var data = await _invoiceService.CreateInvoiceAsync(invoiceDto);
+
+        return data != null
+            ? Ok(new { message = InvoiceConstants.InvoiceCreatedSuccess, data })
+            : BadRequest(new { message = GeneralConstants.InvalidInput });
+    }
+
+    [HttpGet("{invoiceId}")]
+    public async Task<IActionResult> GetInvoiceById(long invoiceId)
+    {
+        if (invoiceId <= 0)
         {
-            return (ModelState.IsValid && invoiceDto != null)
-                ? Ok(new { message = InvoiceConstants.InvoiceCreatedSuccess, data = await _invoiceService.CreateInvoiceAsync(invoiceDto) })
-                : BadRequest(new { message = GeneralConstants.InvalidInput });
+            return BadRequest(new { message = GeneralConstants.InvalidInput });
         }
 
-        [HttpGet("{invoiceId}")]
-        public async Task<IActionResult> GetInvoiceById(long invoiceId)
+        var data = await _invoiceService.GetInvoiceByIdAsync(invoiceId);
+
+        return data != null
+            ? Ok(new { message = GeneralConstants.OperationSuccess, data })
+            : NotFound(new { message = InvoiceConstants.InvoiceNotFound });
+    }
+
+    [HttpPut("{invoiceId}")]
+    public async Task<IActionResult> UpdateInvoice(long invoiceId, [FromBody] InvoiceRequestDto invoiceDto)
+    {
+        if (invoiceId <= 0 || !ModelState.IsValid || invoiceDto == null)
         {
-            return Ok(new { message = GeneralConstants.OperationSuccess, data = await _invoiceService.GetInvoiceByIdAsync(invoiceId) });
+            return BadRequest(new { message = GeneralConstants.InvalidInput });
         }
 
-        [HttpPut("{invoiceId}")]
-        public async Task<IActionResult> UpdateInvoice(long invoiceId, [FromBody] InvoiceRequestDto invoiceDto)
+        var data = await _invoiceService.UpdateInvoiceAsync(invoiceId, invoiceDto);
+
+        return data != null
+            ? Ok(new { message = InvoiceConstants.InvoiceUpdateSuccess, data })
+            : NotFound(new { message = InvoiceConstants.InvoiceNotFound });
+    }
+
+    [HttpDelete("{invoiceId}")]
+    public async Task<IActionResult> DeleteInvoice(long invoiceId)
+    {
+        if (invoiceId <= 0)
         {
-            return (ModelState.IsValid && invoiceDto != null)
-                ? Ok(new { message = InvoiceConstants.InvoiceUpdateSuccess, data = await _invoiceService.UpdateInvoiceAsync(invoiceId, invoiceDto) })
-                : BadRequest(new { message = GeneralConstants.InvalidInput });
+            return BadRequest(new { message = GeneralConstants.InvalidInput });
         }
 
-        [HttpDelete("{invoiceId}")]
-        public async Task<IActionResult> DeleteInvoice(long invoiceId)
+        var result = await _invoiceService.DeleteInvoiceAsync(invoiceId);
+
+        return result
+            ? Ok(new { message = InvoiceConstants.InvoiceDeleteSuccess })
+            : NotFound(new { message = InvoiceConstants.InvoiceNotFound });
+    }
+
+    [HttpPatch("{invoiceId}/status")]
+    public async Task<IActionResult> UpdateInvoiceStatus(long invoiceId, [FromBody] InvoiceStatusUpdateDto statusDto)
+    {
+        if (invoiceId <= 0 || !ModelState.IsValid || statusDto == null)
         {
-            return await _invoiceService.DeleteInvoiceAsync(invoiceId)
-                ? Ok(new { message = InvoiceConstants.InvoiceDeleteSuccess })
-                : BadRequest(new { message = InvoiceConstants.InvoiceNotFound });
+            return BadRequest(new { message = GeneralConstants.InvalidInput });
         }
 
-        [HttpPatch("{invoiceId}/status")]
-        public async Task<IActionResult> UpdateInvoiceStatus(long invoiceId, [FromBody] InvoiceStatusUpdateDto statusDto)
-        {
-            return (ModelState.IsValid && statusDto != null)
-                ? Ok(new { message = InvoiceConstants.InvoiceStatusUpdateSuccess, data = await _invoiceService.UpdateInvoiceStatusAsync(invoiceId, statusDto.NewStatus) })
-                : BadRequest(new { message = GeneralConstants.InvalidInput });
-        }
+        var data = await _invoiceService.UpdateInvoiceStatusAsync(invoiceId, statusDto.NewStatus);
+
+        return data != null
+            ? Ok(new { message = InvoiceConstants.InvoiceStatusUpdateSuccess, data })
+            : NotFound(new { message = InvoiceConstants.InvoiceNotFound });
     }
 }

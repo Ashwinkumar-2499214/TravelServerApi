@@ -1,189 +1,117 @@
 using Microsoft.EntityFrameworkCore;
-using TravelEaseServer.Dto;
 using TravelEaseServer.Model;
 using TravelEaseServer.Repository.Interface;
 
-namespace TravelEaseServer.Repository.Implementation
+namespace TravelEaseServer.Repository.Implementation;
+
+public class InventoryRepository : IInventoryRepository
 {
-    public class InventoryRepository : IInventoryRepository
+    private readonly AppDbContext _context;
+
+    public InventoryRepository(AppDbContext context)
     {
-        private readonly AppDbContext _context;
+        _context = context;
+    }
 
-        public InventoryRepository(AppDbContext context)
+    public async Task<Inventory> CreateInventoryAsync(Inventory inventory)
+    {
+        _context.Inventories.Add(inventory);
+        await _context.SaveChangesAsync();
+        return inventory;
+    }
+
+    public async Task<Inventory?> GetInventoryByIdAsync(long inventoryId)
+    {
+        return await _context.Inventories
+            .AsNoTracking()
+            .FirstOrDefaultAsync(i => i.InventoryId == inventoryId);
+    }
+
+    public async Task<IEnumerable<Inventory>> GetAllInventoryAsync(long? partnerId, string? itemType, int? status, int pageNumber, int pageSize)
+    {
+        var query = _context.Inventories.AsNoTracking();
+
+        if (partnerId.HasValue)
         {
-            _context = context;
+            query = query.Where(i => i.PartnerId == partnerId.Value);
         }
 
-        public async Task<InventoryResponseDto> CreateInventoryAsync(Inventory inventory)
+        if (!string.IsNullOrWhiteSpace(itemType))
         {
-            try
-            {
-                _context.Inventories.Add(inventory);
-                await _context.SaveChangesAsync();
-                return MapInventoryToDto(inventory);
-            }
-            catch (DbUpdateException ex)
-            {
-                throw new InvalidOperationException("Error creating inventory in database.", ex);
-            }
+            var typeLower = itemType.ToLower();
+            query = query.Where(i => i.ItemType.ToLower().Contains(typeLower));
         }
 
-        public async Task<InventoryResponseDto> GetInventoryByIdAsync(long inventoryId)
+        if (status.HasValue)
         {
-            try
-            {
-                var inventory = await _context.Inventories
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(i => i.InventoryId == inventoryId);
-
-                return inventory != null ? MapInventoryToDto(inventory) : null;
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Error retrieving inventory with ID {inventoryId}.", ex);
-            }
+            query = query.Where(i => i.Status == status.Value);
         }
 
-        public async Task<IEnumerable<InventoryResponseDto>> GetAllInventoryAsync(InventorySearchDto searchDto)
+        int skip = (pageNumber - 1) * pageSize;
+
+        return await query
+            .OrderByDescending(i => i.CreatedDate)
+            .Skip(skip)
+            .Take(pageSize)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Inventory>> GetInventoryByPartnerIdAsync(long partnerId)
+    {
+        return await _context.Inventories
+            .AsNoTracking()
+            .Where(i => i.PartnerId == partnerId)
+            .OrderByDescending(i => i.CreatedDate)
+            .ToListAsync();
+    }
+
+    public async Task<Inventory?> UpdateInventoryAsync(Inventory inventory)
+    {
+        var existingInventory = await _context.Inventories.FirstOrDefaultAsync(i => i.InventoryId == inventory.InventoryId);
+        if (existingInventory == null)
         {
-            try
-            {
-                var query = _context.Inventories.AsNoTracking();
-
-                // Apply filters
-                if (searchDto.PartnerId.HasValue)
-                {
-                    query = query.Where(i => i.PartnerId == searchDto.PartnerId.Value);
-                }
-
-                if (!string.IsNullOrWhiteSpace(searchDto.ItemType))
-                {
-                    query = query.Where(i => i.ItemType.ToLower().Contains(searchDto.ItemType.ToLower()));
-                }
-
-                if (searchDto.Status.HasValue)
-                {
-                    query = query.Where(i => i.Status == searchDto.Status.Value);
-                }
-
-                // Apply pagination
-                int skip = (searchDto.PageNumber - 1) * searchDto.PageSize;
-                var inventories = await query
-                    .OrderByDescending(i => i.CreatedDate)
-                    .Skip(skip)
-                    .Take(searchDto.PageSize)
-                    .ToListAsync();
-
-                return inventories.Select(MapInventoryToDto);
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException("Error retrieving inventory items.", ex);
-            }
+            return null;
         }
 
-        public async Task<IEnumerable<InventoryResponseDto>> GetInventoryByPartnerIdAsync(long partnerId)
-        {
-            try
-            {
-                var inventories = await _context.Inventories
-                    .AsNoTracking()
-                    .Where(i => i.PartnerId == partnerId)
-                    .OrderByDescending(i => i.CreatedDate)
-                    .ToListAsync();
+        existingInventory.ItemType = inventory.ItemType;
+        existingInventory.Description = inventory.Description;
+        existingInventory.Availability = inventory.Availability;
+        existingInventory.Price = inventory.Price;
+        existingInventory.Status = inventory.Status;
 
-                return inventories.Select(MapInventoryToDto);
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Error retrieving inventory for partner with ID {partnerId}.", ex);
-            }
+        _context.Inventories.Update(existingInventory);
+        await _context.SaveChangesAsync();
+
+        return existingInventory;
+    }
+
+    public async Task<bool> DeleteInventoryAsync(long inventoryId)
+    {
+        var inventory = await _context.Inventories.FirstOrDefaultAsync(i => i.InventoryId == inventoryId);
+        if (inventory == null)
+        {
+            return false;
         }
 
-        public async Task<InventoryResponseDto> UpdateInventoryAsync(Inventory inventory)
+        _context.Inventories.Remove(inventory);
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<Inventory?> UpdateAvailabilityAsync(long inventoryId, int availability, int status)
+    {
+        var inventory = await _context.Inventories.FirstOrDefaultAsync(i => i.InventoryId == inventoryId);
+        if (inventory == null)
         {
-            try
-            {
-                var existingInventory = await _context.Inventories.FirstOrDefaultAsync(i => i.InventoryId == inventory.InventoryId);
-                if (existingInventory == null)
-                {
-                    throw new KeyNotFoundException($"Inventory with ID {inventory.InventoryId} not found.");
-                }
-
-                existingInventory.ItemType = inventory.ItemType;
-                existingInventory.Description = inventory.Description;
-                existingInventory.Availability = inventory.Availability;
-                existingInventory.Price = inventory.Price;
-                existingInventory.Status = inventory.Status;
-
-                _context.Inventories.Update(existingInventory);
-                await _context.SaveChangesAsync();
-
-                return MapInventoryToDto(existingInventory);
-            }
-            catch (DbUpdateException ex)
-            {
-                throw new InvalidOperationException($"Error updating inventory with ID {inventory.InventoryId}.", ex);
-            }
+            return null;
         }
 
-        public async Task<bool> DeleteInventoryAsync(long inventoryId)
-        {
-            try
-            {
-                var inventory = await _context.Inventories.FirstOrDefaultAsync(i => i.InventoryId == inventoryId);
-                if (inventory == null)
-                {
-                    return false;
-                }
+        inventory.Availability = availability;
+        inventory.Status = status;
 
-                _context.Inventories.Remove(inventory);
-                await _context.SaveChangesAsync();
-                return true;
-            }
-            catch (DbUpdateException ex)
-            {
-                throw new InvalidOperationException($"Error deleting inventory with ID {inventoryId}.", ex);
-            }
-        }
+        _context.Inventories.Update(inventory);
+        await _context.SaveChangesAsync();
 
-        public async Task<InventoryResponseDto> UpdateAvailabilityAsync(long inventoryId, int availability, int status)
-        {
-            try
-            {
-                var inventory = await _context.Inventories.FirstOrDefaultAsync(i => i.InventoryId == inventoryId);
-                if (inventory == null)
-                {
-                    throw new KeyNotFoundException($"Inventory with ID {inventoryId} not found.");
-                }
-
-                inventory.Availability = availability;
-                inventory.Status = status;
-
-                _context.Inventories.Update(inventory);
-                await _context.SaveChangesAsync();
-
-                return MapInventoryToDto(inventory);
-            }
-            catch (DbUpdateException ex)
-            {
-                throw new InvalidOperationException($"Error updating availability for inventory with ID {inventoryId}.", ex);
-            }
-        }
-
-        private InventoryResponseDto MapInventoryToDto(Inventory inventory)
-        {
-            return new InventoryResponseDto
-            {
-                InventoryId = inventory.InventoryId,
-                PartnerId = inventory.PartnerId,
-                ItemType = inventory.ItemType,
-                Description = inventory.Description,
-                Availability = inventory.Availability,
-                Price = inventory.Price,
-                Status = inventory.Status,
-                CreatedDate = inventory.CreatedDate
-            };
-        }
+        return inventory;
     }
 }

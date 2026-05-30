@@ -157,3 +157,4 @@ C:\Users\2499214\TravelEaseServer\obj\Debug\net10.0\TravelEaseServer.pdb
 C:\Users\2499214\TravelEaseServer\obj\Debug\net10.0\TravelEaseServer.genruntimeconfig.cache
 C:\Users\2499214\TravelEaseServer\obj\Debug\net10.0\ref\TravelEaseServer.dll
 c:\Users\2499214\TravelEaseServer\bin\Debug\net10.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
+C:\Users\2499214\TravelEaseServer\obj\Debug\net10.0\TravelEaseServer.sourcelink.json
