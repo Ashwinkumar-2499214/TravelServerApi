@@ -19,6 +19,8 @@ namespace TravelEaseServer.Dto
         public string Address { get; set; }
         public int Status { get; set; }
         public DateTime CreatedDate { get; set; }
+        public DateTime? ModifiedDate { get; set; }
+
     }
 
     public class PartnerSearchDto

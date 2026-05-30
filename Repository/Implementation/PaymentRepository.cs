@@ -1,129 +1,208 @@
 using Microsoft.EntityFrameworkCore;
+using TravelEaseServer.Dto;
 using TravelEaseServer.Model;
 using TravelEaseServer.Repository.Interface;
 
-namespace TravelEaseServer.Repository.Implementation;
-
-public class PaymentRepository : IPaymentRepository
+namespace TravelEaseServer.Repository.Implementation
 {
-    private readonly AppDbContext _context;
-
-    public PaymentRepository(AppDbContext context)
+    public class PaymentRepository : IPaymentRepository
     {
-        _context = context;
-    }
+        private readonly AppDbContext _context;
 
-    public async Task<Payment> CreatePaymentAsync(Payment payment)
-    {
-        _context.Payments.Add(payment);
-        await _context.SaveChangesAsync();
-        return payment;
-    }
-
-    public async Task<Payment?> GetPaymentByIdAsync(long paymentId)
-    {
-        return await _context.Payments
-            .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.PaymentId == paymentId);
-    }
-
-    public async Task<IEnumerable<Payment>> GetAllPaymentsAsync(long? invoiceId, int? status, int? method, DateTime? fromDate, DateTime? toDate, int pageNumber, int pageSize)
-    {
-        var query = _context.Payments.AsNoTracking();
-
-        if (invoiceId.HasValue)
+        public PaymentRepository(AppDbContext context)
         {
-            query = query.Where(p => p.InvoiceId == invoiceId.Value);
+            _context = context;
         }
 
-        if (status.HasValue)
+        public async Task<PaymentResponseDto> CreatePaymentAsync(Payment payment)
         {
-            query = query.Where(p => p.Status == status.Value);
+            try
+            {
+                _context.Payments.Add(payment);
+                await _context.SaveChangesAsync();
+                return MapPaymentToDto(payment);
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new InvalidOperationException("Error creating payment in database.", ex);
+            }
         }
 
-        if (method.HasValue)
+        public async Task<PaymentResponseDto> GetPaymentByIdAsync(long paymentId)
         {
-            query = query.Where(p => p.Method == method.Value);
+            try
+            {
+                var payment = await _context.Payments
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.PaymentId == paymentId);
+
+                return payment != null ? MapPaymentToDto(payment) : null;
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Error retrieving payment with ID {paymentId}.", ex);
+            }
         }
 
-        if (fromDate.HasValue)
+        public async Task<IEnumerable<PaymentResponseDto>> GetAllPaymentsAsync(PaymentSearchDto searchDto)
         {
-            query = query.Where(p => p.PaymentDate >= fromDate.Value);
+            try
+            {
+                var query = _context.Payments.AsNoTracking();
+
+                // Apply filters
+                if (searchDto.InvoiceId.HasValue)
+                {
+                    query = query.Where(p => p.InvoiceId == searchDto.InvoiceId.Value);
+                }
+
+                if (searchDto.Status.HasValue)
+                {
+                    query = query.Where(p => p.Status == searchDto.Status.Value);
+                }
+
+                if (searchDto.Method.HasValue)
+                {
+                    query = query.Where(p => p.Method == searchDto.Method.Value);
+                }
+
+                if (searchDto.FromDate.HasValue)
+                {
+                    query = query.Where(p => p.PaymentDate >= searchDto.FromDate.Value);
+                }
+
+                if (searchDto.ToDate.HasValue)
+                {
+                    query = query.Where(p => p.PaymentDate <= searchDto.ToDate.Value);
+                }
+
+                // Apply pagination
+                int skip = (searchDto.PageNumber - 1) * searchDto.PageSize;
+                var payments = await query
+                    .OrderByDescending(p => p.PaymentDate)
+                    .Skip(skip)
+                    .Take(searchDto.PageSize)
+                    .ToListAsync();
+
+                return payments.Select(MapPaymentToDto);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException("Error retrieving payments.", ex);
+            }
         }
 
-        if (toDate.HasValue)
+        public async Task<IEnumerable<PaymentResponseDto>> GetPaymentsByInvoiceIdAsync(long invoiceId)
         {
-            query = query.Where(p => p.PaymentDate <= toDate.Value);
+            try
+            {
+                var payments = await _context.Payments
+                    .AsNoTracking()
+                    .Where(p => p.InvoiceId == invoiceId)
+                    .OrderByDescending(p => p.PaymentDate)
+                    .ToListAsync();
+
+                return payments.Select(MapPaymentToDto);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Error retrieving payments for invoice with ID {invoiceId}.", ex);
+            }
         }
 
-        int skip = (pageNumber - 1) * pageSize;
-
-        return await query
-            .OrderByDescending(p => p.PaymentDate)
-            .Skip(skip)
-            .Take(pageSize)
-            .ToListAsync();
-    }
-
-    public async Task<IEnumerable<Payment>> GetPaymentsByInvoiceIdAsync(long invoiceId)
-    {
-        return await _context.Payments
-            .AsNoTracking()
-            .Where(p => p.InvoiceId == invoiceId)
-            .OrderByDescending(p => p.PaymentDate)
-            .ToListAsync();
-    }
-
-    public async Task<Payment?> UpdatePaymentAsync(Payment payment)
-    {
-        var existingPayment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentId == payment.PaymentId);
-        if (existingPayment == null)
+        public async Task<PaymentResponseDto> UpdatePaymentAsync(Payment payment)
         {
-            return null;
+            try
+            {
+                var existingPayment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentId == payment.PaymentId);
+                if (existingPayment == null)
+                {
+                    throw new KeyNotFoundException($"Payment with ID {payment.PaymentId} not found.");
+                }
+
+                existingPayment.Amount = payment.Amount;
+                existingPayment.PaymentDate = payment.PaymentDate;
+                existingPayment.Method = payment.Method;
+                existingPayment.TransactionReference = payment.TransactionReference;
+                existingPayment.Status = payment.Status;
+
+                _context.Payments.Update(existingPayment);
+                await _context.SaveChangesAsync();
+
+                return MapPaymentToDto(existingPayment);
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new InvalidOperationException($"Error updating payment with ID {payment.PaymentId}.", ex);
+            }
         }
 
-        existingPayment.Amount = payment.Amount;
-        existingPayment.PaymentDate = payment.PaymentDate;
-        existingPayment.Method = payment.Method;
-        existingPayment.TransactionReference = payment.TransactionReference;
-        existingPayment.Status = payment.Status;
-
-        _context.Payments.Update(existingPayment);
-        await _context.SaveChangesAsync();
-
-        return existingPayment;
-    }
-
-    public async Task<Payment?> UpdatePaymentStatusAsync(long paymentId, int status)
-    {
-        var payment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentId == paymentId);
-        if (payment == null)
+        public async Task<PaymentResponseDto> UpdatePaymentStatusAsync(long paymentId, int status)
         {
-            return null;
+            try
+            {
+                var payment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentId == paymentId);
+                if (payment == null)
+                {
+                    throw new KeyNotFoundException($"Payment with ID {paymentId} not found.");
+                }
+
+                payment.Status = status;
+
+                _context.Payments.Update(payment);
+                await _context.SaveChangesAsync();
+
+                return MapPaymentToDto(payment);
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new InvalidOperationException($"Error updating payment status with ID {paymentId}.", ex);
+            }
         }
 
-        payment.Status = status;
-
-        _context.Payments.Update(payment);
-        await _context.SaveChangesAsync();
-
-        return payment;
-    }
-
-    public async Task<bool> ProcessRefundAsync(long paymentId, decimal refundAmount)
-    {
-        var payment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentId == paymentId);
-        if (payment == null || refundAmount <= 0 || refundAmount > payment.Amount)
+        public async Task<bool> ProcessRefundAsync(long paymentId, decimal refundAmount)
         {
-            return false;
+            try
+            {
+                var payment = await _context.Payments.FirstOrDefaultAsync(p => p.PaymentId == paymentId);
+                if (payment == null)
+                {
+                    throw new KeyNotFoundException($"Payment with ID {paymentId} not found.");
+                }
+
+                if (refundAmount <= 0 || refundAmount > payment.Amount)
+                {
+                    throw new InvalidOperationException("Invalid refund amount.");
+                }
+
+                // Update the payment amount to reflect the refund
+                payment.Amount -= refundAmount;
+                payment.Status = 2; // Assuming 2 is refunded status
+
+                _context.Payments.Update(payment);
+                await _context.SaveChangesAsync();
+
+                return true;
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new InvalidOperationException($"Error processing refund for payment with ID {paymentId}.", ex);
+            }
         }
 
-        payment.Amount -= refundAmount;
-        payment.Status = 2;
-
-        _context.Payments.Update(payment);
-        await _context.SaveChangesAsync();
-
-        return true;
+        private PaymentResponseDto MapPaymentToDto(Payment payment)
+        {
+            return new PaymentResponseDto
+            {
+                PaymentId = payment.PaymentId,
+                InvoiceId = payment.InvoiceId,
+                Amount = payment.Amount,
+                PaymentDate = payment.PaymentDate,
+                Method = payment.Method,
+                Status = payment.Status,
+                TransactionReference = payment.TransactionReference,
+                CreatedDate = payment.CreatedDate
+            };
+        }
     }
 }

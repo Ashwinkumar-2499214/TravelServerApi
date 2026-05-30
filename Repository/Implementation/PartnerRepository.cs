@@ -1,109 +1,174 @@
 using Microsoft.EntityFrameworkCore;
+using TravelEaseServer.Dto;
 using TravelEaseServer.Model;
 using TravelEaseServer.Repository.Interface;
 
-namespace TravelEaseServer.Repository.Implementation;
-
-public class PartnerRepository : IPartnerRepository
+namespace TravelEaseServer.Repository.Implementation
 {
-    private readonly AppDbContext _context;
-
-    public PartnerRepository(AppDbContext context)
+    public class PartnerRepository : IPartnerRepository
     {
-        _context = context;
-    }
+        private readonly AppDbContext _context;
 
-    public async Task<Partner> CreatePartnerAsync(Partner partner)
-    {
-        _context.Partners.Add(partner);
-        await _context.SaveChangesAsync();
-        return partner;
-    }
-
-    public async Task<Partner?> GetPartnerByIdAsync(long partnerId)
-    {
-        return await _context.Partners
-            .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.PartnerId == partnerId);
-    }
-
-    public async Task<IEnumerable<Partner>> GetAllPartnersAsync(string? searchTerm, int? type, int? status, int pageNumber, int pageSize)
-    {
-        var query = _context.Partners.AsNoTracking();
-
-        if (!string.IsNullOrWhiteSpace(searchTerm))
+        public PartnerRepository(AppDbContext context)
         {
-            var term = searchTerm.ToLower();
-            query = query.Where(p => p.Name.ToLower().Contains(term) || p.ContactEmail.ToLower().Contains(term));
+            _context = context;
         }
 
-        if (type.HasValue)
+        public async Task<PartnerResponseDto> CreatePartnerAsync(Partner partner)
         {
-            query = query.Where(p => p.Type == type.Value);
+            try
+            {
+                _context.Partners.Add(partner);
+                await _context.SaveChangesAsync();
+                return MapPartnerToDto(partner);
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new InvalidOperationException("Error creating partner in database.", ex);
+            }
         }
 
-        if (status.HasValue)
+        public async Task<PartnerResponseDto> GetPartnerByIdAsync(long partnerId)
         {
-            query = query.Where(p => p.Status == status.Value);
+            try
+            {
+                var partner = await _context.Partners
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.PartnerId == partnerId);
+
+                return partner != null ? MapPartnerToDto(partner) : null;
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Error retrieving partner with ID {partnerId}.", ex);
+            }
         }
 
-        int skip = (pageNumber - 1) * pageSize;
-
-        return await query
-            .OrderByDescending(p => p.CreatedDate)
-            .Skip(skip)
-            .Take(pageSize)
-            .ToListAsync();
-    }
-
-    public async Task<Partner?> UpdatePartnerAsync(Partner partner)
-    {
-        var existingPartner = await _context.Partners.FirstOrDefaultAsync(p => p.PartnerId == partner.PartnerId);
-        if (existingPartner == null)
+        public async Task<IEnumerable<PartnerResponseDto>> GetAllPartnersAsync(PartnerSearchDto searchDto)
         {
-            return null;
+            try
+            {
+                var query = _context.Partners.AsNoTracking();
+
+                // Apply filters
+                if (!string.IsNullOrWhiteSpace(searchDto.SearchTerm))
+                {
+                    var term = searchDto.SearchTerm.ToLower();
+                    query = query.Where(p => p.Name.ToLower().Contains(term) ||
+                                           p.ContactEmail.ToLower().Contains(term));
+                }
+
+                if (searchDto.Type.HasValue)
+                {
+                    query = query.Where(p => p.Type == searchDto.Type.Value);
+                }
+
+                if (searchDto.Status.HasValue)
+                {
+                    query = query.Where(p => p.Status == searchDto.Status.Value);
+                }
+
+                // Apply pagination
+                int skip = (searchDto.PageNumber - 1) * searchDto.PageSize;
+                var partners = await query
+                    .OrderByDescending(p => p.CreatedDate)
+                    .Skip(skip)
+                    .Take(searchDto.PageSize)
+                    .ToListAsync();
+
+                return partners.Select(MapPartnerToDto);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException("Error retrieving partners.", ex);
+            }
         }
 
-        existingPartner.Name = partner.Name;
-        existingPartner.Type = partner.Type;
-        existingPartner.ContactEmail = partner.ContactEmail;
-        existingPartner.ContactPhone = partner.ContactPhone;
-        existingPartner.Address = partner.Address;
-        existingPartner.ModifiedDate = DateTime.UtcNow;
-
-        _context.Partners.Update(existingPartner);
-        await _context.SaveChangesAsync();
-
-        return existingPartner;
-    }
-
-    public async Task<bool> DeletePartnerAsync(long partnerId)
-    {
-        var partner = await _context.Partners.FirstOrDefaultAsync(p => p.PartnerId == partnerId);
-        if (partner == null)
+        public async Task<PartnerResponseDto> UpdatePartnerAsync(Partner partner)
         {
-            return false;
+            try
+            {
+                var existingPartner = await _context.Partners.FirstOrDefaultAsync(p => p.PartnerId == partner.PartnerId);
+                if (existingPartner == null)
+                {
+                    throw new KeyNotFoundException($"Partner with ID {partner.PartnerId} not found.");
+                }
+
+                existingPartner.Name = partner.Name;
+                existingPartner.Type = partner.Type;
+                existingPartner.ContactEmail = partner.ContactEmail;
+                existingPartner.ContactPhone = partner.ContactPhone;
+                existingPartner.Address = partner.Address;
+                existingPartner.ModifiedDate = DateTime.UtcNow;
+
+                _context.Partners.Update(existingPartner);
+                await _context.SaveChangesAsync();
+
+                return MapPartnerToDto(existingPartner);
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new InvalidOperationException($"Error updating partner with ID {partner.PartnerId}.", ex);
+            }
         }
 
-        _context.Partners.Remove(partner);
-        await _context.SaveChangesAsync();
-        return true;
-    }
-
-    public async Task<Partner?> UpdatePartnerStatusAsync(long partnerId, int status)
-    {
-        var partner = await _context.Partners.FirstOrDefaultAsync(p => p.PartnerId == partnerId);
-        if (partner == null)
+        public async Task<bool> DeletePartnerAsync(long partnerId)
         {
-            return null;
+            try
+            {
+                var partner = await _context.Partners.FirstOrDefaultAsync(p => p.PartnerId == partnerId);
+                if (partner == null)
+                {
+                    return false;
+                }
+
+                _context.Partners.Remove(partner);
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new InvalidOperationException($"Error deleting partner with ID {partnerId}.", ex);
+            }
         }
 
-        partner.Status = status;
-        partner.ModifiedDate = DateTime.UtcNow;
+        public async Task<PartnerResponseDto> UpdatePartnerStatusAsync(long partnerId, int status)
+        {
+            try
+            {
+                var partner = await _context.Partners.FirstOrDefaultAsync(p => p.PartnerId == partnerId);
+                if (partner == null)
+                {
+                    throw new KeyNotFoundException($"Partner with ID {partnerId} not found.");
+                }
 
-        _context.Partners.Update(partner);
-        await _context.SaveChangesAsync();
+                partner.Status = status;
+                partner.ModifiedDate = DateTime.UtcNow;
 
-        return partner;
+                _context.Partners.Update(partner);
+                await _context.SaveChangesAsync();
+
+                return MapPartnerToDto(partner);
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new InvalidOperationException($"Error updating partner status with ID {partnerId}.", ex);
+            }
+        }
+
+        private PartnerResponseDto MapPartnerToDto(Partner partner)
+        {
+            return new PartnerResponseDto
+            {
+                PartnerId = partner.PartnerId,
+                Name = partner.Name,
+                Type = partner.Type,
+                ContactEmail = partner.ContactEmail,
+                ContactPhone = partner.ContactPhone,
+                Address = partner.Address,
+                Status = partner.Status,
+                CreatedDate = partner.CreatedDate
+            };
+        }
     }
 }

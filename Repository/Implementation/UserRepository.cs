@@ -1,99 +1,163 @@
 using Microsoft.EntityFrameworkCore;
+using TravelEaseServer.Dto;
 using TravelEaseServer.Model;
 using TravelEaseServer.Repository.Interface;
 
-namespace TravelEaseServer.Repository.Implementation;
-
-public class UserRepository : IUserRepository
+namespace TravelEaseServer.Repository.Implementation
 {
-    private readonly AppDbContext _context;
-
-    public UserRepository(AppDbContext context)
+    public class UserRepository : IUserRepository
     {
-        _context = context;
-    }
+        private readonly AppDbContext _context;
 
-    public async Task<User> CreateUserAsync(User user)
-    {
-        _context.Users.Add(user);
-        await _context.SaveChangesAsync();
-        return user;
-    }
-
-    public async Task<User?> GetUserByIdAsync(long userId)
-    {
-        return await _context.Users
-            .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.UserId == userId);
-    }
-
-    public async Task<IEnumerable<User>> GetAllUsersAsync(string? searchTerm, int? role, bool? isActive, int pageNumber, int pageSize)
-    {
-        var query = _context.Users.AsNoTracking();
-
-        if (!string.IsNullOrWhiteSpace(searchTerm))
+        public UserRepository(AppDbContext context)
         {
-            var term = searchTerm.ToLower();
-            query = query.Where(u => u.Name.ToLower().Contains(term) || u.Email.ToLower().Contains(term));
+            _context = context;
         }
 
-        if (role.HasValue)
+        public async Task<UserResponseDto> CreateUserAsync(User user)
         {
-            query = query.Where(u => u.Role == role.Value);
+            try
+            {
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+                return MapUserToDto(user);
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new InvalidOperationException("Error creating user in database.", ex);
+            }
         }
 
-        if (isActive.HasValue)
+        public async Task<UserResponseDto> GetUserByIdAsync(long userId)
         {
-            query = query.Where(u => u.IsActive == isActive.Value);
+            try
+            {
+                var user = await _context.Users
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.UserId == userId);
+
+                return user != null ? MapUserToDto(user) : null;
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Error retrieving user with ID {userId}.", ex);
+            }
         }
 
-        int skip = (pageNumber - 1) * pageSize;
-
-        return await query
-            .OrderByDescending(u => u.CreatedDate)
-            .Skip(skip)
-            .Take(pageSize)
-            .ToListAsync();
-    }
-
-    public async Task<User?> UpdateUserAsync(User user)
-    {
-        var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.UserId == user.UserId);
-        if (existingUser == null)
+        public async Task<IEnumerable<UserResponseDto>> GetAllUsersAsync(UserSearchDto searchDto)
         {
-            return null;
+            try
+            {
+                var query = _context.Users.AsNoTracking();
+
+                // Apply filters
+                if (!string.IsNullOrWhiteSpace(searchDto.SearchTerm))
+                {
+                    var term = searchDto.SearchTerm.ToLower();
+                    query = query.Where(u => u.Name.ToLower().Contains(term) ||
+                                           u.Email.ToLower().Contains(term));
+                }
+
+                if (searchDto.Role.HasValue)
+                {
+                    query = query.Where(u => u.Role == searchDto.Role.Value);
+                }
+
+                if (searchDto.IsActive.HasValue)
+                {
+                    query = query.Where(u => u.IsActive == searchDto.IsActive.Value);
+                }
+
+                // Apply pagination
+                int skip = (searchDto.PageNumber - 1) * searchDto.PageSize;
+                var users = await query
+                    .OrderByDescending(u => u.CreatedDate)
+                    .Skip(skip)
+                    .Take(searchDto.PageSize)
+                    .ToListAsync();
+
+                return users.Select(MapUserToDto);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException("Error retrieving users.", ex);
+            }
         }
 
-        existingUser.Name = user.Name;
-        existingUser.Email = user.Email;
-        existingUser.Phone = user.Phone;
-        existingUser.Role = user.Role;
-        existingUser.IsActive = user.IsActive;
-        existingUser.ModifiedDate = DateTime.UtcNow;
-
-        _context.Users.Update(existingUser);
-        await _context.SaveChangesAsync();
-
-        return existingUser;
-    }
-
-    public async Task<bool> DeleteUserAsync(long userId)
-    {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == userId);
-        if (user == null)
+        public async Task<UserResponseDto> UpdateUserAsync(User user)
         {
-            return false;
+            try
+            {
+                var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.UserId == user.UserId);
+                if (existingUser == null)
+                {
+                    throw new KeyNotFoundException($"User with ID {user.UserId} not found.");
+                }
+
+                existingUser.Name = user.Name;
+                existingUser.Email = user.Email;
+                existingUser.Phone = user.Phone;
+                existingUser.Role = user.Role;
+                existingUser.IsActive = user.IsActive;
+                existingUser.ModifiedDate = DateTime.UtcNow;
+
+                _context.Users.Update(existingUser);
+                await _context.SaveChangesAsync();
+
+                return MapUserToDto(existingUser);
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new InvalidOperationException($"Error updating user with ID {user.UserId}.", ex);
+            }
         }
 
-        _context.Users.Remove(user);
-        await _context.SaveChangesAsync();
-        return true;
-    }
+        public async Task<bool> DeleteUserAsync(long userId)
+        {
+            try
+            {
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == userId);
+                if (user == null)
+                {
+                    return false;
+                }
 
-    public async Task<User?> GetUserByEmailAsync(string email)
-    {
-        return await _context.Users
-            .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Email == email);
+                _context.Users.Remove(user);
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new InvalidOperationException($"Error deleting user with ID {userId}.", ex);
+            }
+        }
+
+        public async Task<User> GetUserByEmailAsync(string email)
+        {
+            try
+            {
+                return await _context.Users
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Email == email);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Error retrieving user by email {email}.", ex);
+            }
+        }
+
+        private UserResponseDto MapUserToDto(User user)
+        {
+            return new UserResponseDto
+            {
+                UserId = user.UserId,
+                Name = user.Name,
+                Email = user.Email,
+                Phone = user.Phone,
+                Role = user.Role,
+                IsActive = user.IsActive,
+                CreatedDate = user.CreatedDate
+            };
+        }
     }
 }

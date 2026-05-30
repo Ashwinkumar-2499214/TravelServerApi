@@ -16,96 +16,169 @@ namespace TravelEaseServer.Repository.Implementation
 
         public async Task<BookingResponseDto> CreateBookingAsync(Booking booking)
         {
-            _context.Bookings.Add(booking);
-            await _context.SaveChangesAsync();
-            return MapBookingToDto(booking);
+            try
+            {
+                _context.Bookings.Add(booking);
+                await _context.SaveChangesAsync();
+                return MapBookingToDto(booking);
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new InvalidOperationException("Error creating booking in database.", ex);
+            }
         }
 
         public async Task<BookingResponseDto> GetBookingByIdAsync(long bookingId)
         {
-            var booking = await _context.Bookings
-                .AsNoTracking()
-                .FirstOrDefaultAsync(b => b.BookingId == bookingId);
+            try
+            {
+                var booking = await _context.Bookings
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(b => b.BookingId == bookingId);
 
-            return booking != null ? MapBookingToDto(booking) : null;
+                return booking != null ? MapBookingToDto(booking) : null;
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Error retrieving booking with ID {bookingId}.", ex);
+            }
         }
 
         public async Task<IEnumerable<BookingResponseDto>> GetAllBookingsAsync(BookingSearchDto searchDto)
         {
-            var query = _context.Bookings.AsNoTracking();
+            try
+            {
+                var query = _context.Bookings.AsNoTracking();
 
-            query = searchDto.UserId.HasValue ? query.Where(b => b.UserId == searchDto.UserId.Value) : query;
-            query = searchDto.PartnerId.HasValue ? query.Where(b => b.PartnerId == searchDto.PartnerId.Value) : query;
-            query = searchDto.Status.HasValue ? query.Where(b => b.Status == searchDto.Status.Value) : query;
-            query = searchDto.FromDate.HasValue ? query.Where(b => b.BookingDate >= searchDto.FromDate.Value) : query;
-            query = searchDto.ToDate.HasValue ? query.Where(b => b.BookingDate <= searchDto.ToDate.Value) : query;
+                // Apply filters
+                if (searchDto.UserId.HasValue)
+                {
+                    query = query.Where(b => b.UserId == searchDto.UserId.Value);
+                }
 
-            int skip = (searchDto.PageNumber - 1) * searchDto.PageSize;
-            var bookings = await query
-                .OrderByDescending(b => b.BookingDate)
-                .Skip(skip)
-                .Take(searchDto.PageSize)
-                .ToListAsync();
+                if (searchDto.PartnerId.HasValue)
+                {
+                    query = query.Where(b => b.PartnerId == searchDto.PartnerId.Value);
+                }
 
-            return bookings.Select(MapBookingToDto);
+                if (searchDto.Status.HasValue)
+                {
+                    query = query.Where(b => b.Status == searchDto.Status.Value);
+                }
+
+                if (searchDto.FromDate.HasValue)
+                {
+                    query = query.Where(b => b.BookingDate >= searchDto.FromDate.Value);
+                }
+
+                if (searchDto.ToDate.HasValue)
+                {
+                    query = query.Where(b => b.BookingDate <= searchDto.ToDate.Value);
+                }
+
+                // Apply pagination
+                int skip = (searchDto.PageNumber - 1) * searchDto.PageSize;
+                var bookings = await query
+                    .OrderByDescending(b => b.BookingDate)
+                    .Skip(skip)
+                    .Take(searchDto.PageSize)
+                    .ToListAsync();
+
+                return bookings.Select(MapBookingToDto);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException("Error retrieving bookings.", ex);
+            }
         }
 
         public async Task<IEnumerable<BookingResponseDto>> GetBookingsByUserIdAsync(long userId)
         {
-            var bookings = await _context.Bookings
-                .AsNoTracking()
-                .Where(b => b.UserId == userId)
-                .OrderByDescending(b => b.BookingDate)
-                .ToListAsync();
+            try
+            {
+                var bookings = await _context.Bookings
+                    .AsNoTracking()
+                    .Where(b => b.UserId == userId)
+                    .OrderByDescending(b => b.BookingDate)
+                    .ToListAsync();
 
-            return bookings.Select(MapBookingToDto);
+                return bookings.Select(MapBookingToDto);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Error retrieving bookings for user with ID {userId}.", ex);
+            }
         }
 
         public async Task<BookingResponseDto> UpdateBookingAsync(Booking booking)
         {
-            var existingBooking = await _context.Bookings.FirstOrDefaultAsync(b => b.BookingId == booking.BookingId);
-            
-            if (existingBooking == null)
-                throw new KeyNotFoundException($"Booking with ID {booking.BookingId} not found.");
+            try
+            {
+                var existingBooking = await _context.Bookings.FirstOrDefaultAsync(b => b.BookingId == booking.BookingId);
+                if (existingBooking == null)
+                {
+                    throw new KeyNotFoundException($"Booking with ID {booking.BookingId} not found.");
+                }
 
-            existingBooking.ItemType = booking.ItemType;
-            existingBooking.BookingDate = booking.BookingDate;
-            existingBooking.Status = booking.Status;
-            existingBooking.Amount = booking.Amount;
-            existingBooking.ModifiedDate = DateTime.UtcNow;
+                existingBooking.ItemType = booking.ItemType;
+                existingBooking.BookingDate = booking.BookingDate;
+                existingBooking.Status = booking.Status;
+                existingBooking.Amount = booking.Amount;
+                existingBooking.ModifiedDate = DateTime.UtcNow;
 
-            _context.Bookings.Update(existingBooking);
-            await _context.SaveChangesAsync();
+                _context.Bookings.Update(existingBooking);
+                await _context.SaveChangesAsync();
 
-            return MapBookingToDto(existingBooking);
+                return MapBookingToDto(existingBooking);
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new InvalidOperationException($"Error updating booking with ID {booking.BookingId}.", ex);
+            }
         }
 
         public async Task<bool> DeleteBookingAsync(long bookingId)
         {
-            var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.BookingId == bookingId);
-            
-            if (booking == null)
-                return false;
+            try
+            {
+                var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.BookingId == bookingId);
+                if (booking == null)
+                {
+                    return false;
+                }
 
-            _context.Bookings.Remove(booking);
-            await _context.SaveChangesAsync();
-            return true;
+                _context.Bookings.Remove(booking);
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new InvalidOperationException($"Error deleting booking with ID {bookingId}.", ex);
+            }
         }
 
         public async Task<BookingResponseDto> UpdateBookingStatusAsync(long bookingId, int status)
         {
-            var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.BookingId == bookingId);
-            
-            if (booking == null)
-                throw new KeyNotFoundException($"Booking with ID {bookingId} not found.");
+            try
+            {
+                var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.BookingId == bookingId);
+                if (booking == null)
+                {
+                    throw new KeyNotFoundException($"Booking with ID {bookingId} not found.");
+                }
 
-            booking.Status = status;
-            booking.ModifiedDate = DateTime.UtcNow;
+                booking.Status = status;
+                booking.ModifiedDate = DateTime.UtcNow;
 
-            _context.Bookings.Update(booking);
-            await _context.SaveChangesAsync();
+                _context.Bookings.Update(booking);
+                await _context.SaveChangesAsync();
 
-            return MapBookingToDto(booking);
+                return MapBookingToDto(booking);
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new InvalidOperationException($"Error updating booking status with ID {bookingId}.", ex);
+            }
         }
 
         private BookingResponseDto MapBookingToDto(Booking booking)

@@ -71,8 +71,7 @@ namespace TravelEaseServer.Service.Implementation
 
         public Task<bool> ValidateTokenAsync(string token)
         {
-            // Simple validation hook. We rely on JWT validation middleware for actual auth.
-            // This method is kept for completeness.
+           
             if (string.IsNullOrWhiteSpace(token))
                 return Task.FromResult(false);
 

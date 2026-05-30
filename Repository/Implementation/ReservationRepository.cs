@@ -1,119 +1,191 @@
 using Microsoft.EntityFrameworkCore;
+using TravelEaseServer.Dto;
 using TravelEaseServer.Model;
 using TravelEaseServer.Repository.Interface;
 
-namespace TravelEaseServer.Repository.Implementation;
-
-public class ReservationRepository : IReservationRepository
+namespace TravelEaseServer.Repository.Implementation
 {
-    private readonly AppDbContext _context;
-
-    public ReservationRepository(AppDbContext context)
+    public class ReservationRepository : IReservationRepository
     {
-        _context = context;
-    }
+        private readonly AppDbContext _context;
 
-    public async Task<Reservation> CreateReservationAsync(Reservation reservation)
-    {
-        _context.Reservations.Add(reservation);
-        await _context.SaveChangesAsync();
-        return reservation;
-    }
-
-    public async Task<Reservation?> GetReservationByIdAsync(long reservationId)
-    {
-        return await _context.Reservations
-            .AsNoTracking()
-            .FirstOrDefaultAsync(r => r.ReservationId == reservationId);
-    }
-
-    public async Task<IEnumerable<Reservation>> GetAllReservationsAsync(long? bookingId, int? status, DateTime? fromDate, DateTime? toDate, int pageNumber, int pageSize)
-    {
-        var query = _context.Reservations.AsNoTracking();
-
-        if (bookingId.HasValue)
+        public ReservationRepository(AppDbContext context)
         {
-            query = query.Where(r => r.BookingId == bookingId.Value);
+            _context = context;
         }
 
-        if (status.HasValue)
+        public async Task<ReservationResponseDto> CreateReservationAsync(Reservation reservation)
         {
-            query = query.Where(r => r.Status == status.Value);
+            try
+            {
+                _context.Reservations.Add(reservation);
+                await _context.SaveChangesAsync();
+                return MapReservationToDto(reservation);
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new InvalidOperationException("Error creating reservation in database.", ex);
+            }
         }
 
-        if (fromDate.HasValue)
+        public async Task<ReservationResponseDto> GetReservationByIdAsync(long reservationId)
         {
-            query = query.Where(r => r.StartDate >= fromDate.Value);
+            try
+            {
+                var reservation = await _context.Reservations
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(r => r.ReservationId == reservationId);
+
+                return reservation != null ? MapReservationToDto(reservation) : null;
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Error retrieving reservation with ID {reservationId}.", ex);
+            }
         }
 
-        if (toDate.HasValue)
+        public async Task<IEnumerable<ReservationResponseDto>> GetAllReservationsAsync(ReservationSearchDto searchDto)
         {
-            query = query.Where(r => r.EndDate <= toDate.Value);
+            try
+            {
+                var query = _context.Reservations.AsNoTracking();
+
+                // Apply filters
+                if (searchDto.BookingId.HasValue)
+                {
+                    query = query.Where(r => r.BookingId == searchDto.BookingId.Value);
+                }
+
+                if (searchDto.Status.HasValue)
+                {
+                    query = query.Where(r => r.Status == searchDto.Status.Value);
+                }
+
+                if (searchDto.FromDate.HasValue)
+                {
+                    query = query.Where(r => r.StartDate >= searchDto.FromDate.Value);
+                }
+
+                if (searchDto.ToDate.HasValue)
+                {
+                    query = query.Where(r => r.EndDate <= searchDto.ToDate.Value);
+                }
+
+                // Apply pagination
+                int skip = (searchDto.PageNumber - 1) * searchDto.PageSize;
+                var reservations = await query
+                    .OrderByDescending(r => r.CreatedDate)
+                    .Skip(skip)
+                    .Take(searchDto.PageSize)
+                    .ToListAsync();
+
+                return reservations.Select(MapReservationToDto);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException("Error retrieving reservations.", ex);
+            }
         }
 
-        int skip = (pageNumber - 1) * pageSize;
-
-        return await query
-            .OrderByDescending(r => r.CreatedDate)
-            .Skip(skip)
-            .Take(pageSize)
-            .ToListAsync();
-    }
-
-    public async Task<IEnumerable<Reservation>> GetReservationsByBookingIdAsync(long bookingId)
-    {
-        return await _context.Reservations
-            .AsNoTracking()
-            .Where(r => r.BookingId == bookingId)
-            .OrderByDescending(r => r.CreatedDate)
-            .ToListAsync();
-    }
-
-    public async Task<Reservation?> UpdateReservationAsync(Reservation reservation)
-    {
-        var existingReservation = await _context.Reservations.FirstOrDefaultAsync(r => r.ReservationId == reservation.ReservationId);
-        if (existingReservation == null)
+        public async Task<IEnumerable<ReservationResponseDto>> GetReservationsByBookingIdAsync(long bookingId)
         {
-            return null;
+            try
+            {
+                var reservations = await _context.Reservations
+                    .AsNoTracking()
+                    .Where(r => r.BookingId == bookingId)
+                    .OrderByDescending(r => r.CreatedDate)
+                    .ToListAsync();
+
+                return reservations.Select(MapReservationToDto);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Error retrieving reservations for booking with ID {bookingId}.", ex);
+            }
         }
 
-        existingReservation.Details = reservation.Details;
-        existingReservation.StartDate = reservation.StartDate;
-        existingReservation.EndDate = reservation.EndDate;
-        existingReservation.Status = reservation.Status;
-
-        _context.Reservations.Update(existingReservation);
-        await _context.SaveChangesAsync();
-
-        return existingReservation;
-    }
-
-    public async Task<bool> DeleteReservationAsync(long reservationId)
-    {
-        var reservation = await _context.Reservations.FirstOrDefaultAsync(r => r.ReservationId == reservationId);
-        if (reservation == null)
+        public async Task<ReservationResponseDto> UpdateReservationAsync(Reservation reservation)
         {
-            return false;
+            try
+            {
+                var existingReservation = await _context.Reservations.FirstOrDefaultAsync(r => r.ReservationId == reservation.ReservationId);
+                if (existingReservation == null)
+                {
+                    throw new KeyNotFoundException($"Reservation with ID {reservation.ReservationId} not found.");
+                }
+
+                existingReservation.Details = reservation.Details;
+                existingReservation.StartDate = reservation.StartDate;
+                existingReservation.EndDate = reservation.EndDate;
+                existingReservation.Status = reservation.Status;
+
+                _context.Reservations.Update(existingReservation);
+                await _context.SaveChangesAsync();
+
+                return MapReservationToDto(existingReservation);
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new InvalidOperationException($"Error updating reservation with ID {reservation.ReservationId}.", ex);
+            }
         }
 
-        _context.Reservations.Remove(reservation);
-        await _context.SaveChangesAsync();
-        return true;
-    }
-
-    public async Task<Reservation?> UpdateReservationStatusAsync(long reservationId, int status)
-    {
-        var reservation = await _context.Reservations.FirstOrDefaultAsync(r => r.ReservationId == reservationId);
-        if (reservation == null)
+        public async Task<bool> DeleteReservationAsync(long reservationId)
         {
-            return null;
+            try
+            {
+                var reservation = await _context.Reservations.FirstOrDefaultAsync(r => r.ReservationId == reservationId);
+                if (reservation == null)
+                {
+                    return false;
+                }
+
+                _context.Reservations.Remove(reservation);
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new InvalidOperationException($"Error deleting reservation with ID {reservationId}.", ex);
+            }
         }
 
-        reservation.Status = status;
+        public async Task<ReservationResponseDto> UpdateReservationStatusAsync(long reservationId, int status)
+        {
+            try
+            {
+                var reservation = await _context.Reservations.FirstOrDefaultAsync(r => r.ReservationId == reservationId);
+                if (reservation == null)
+                {
+                    throw new KeyNotFoundException($"Reservation with ID {reservationId} not found.");
+                }
 
-        _context.Reservations.Update(reservation);
-        await _context.SaveChangesAsync();
+                reservation.Status = status;
 
-        return reservation;
+                _context.Reservations.Update(reservation);
+                await _context.SaveChangesAsync();
+
+                return MapReservationToDto(reservation);
+            }
+            catch (DbUpdateException ex)
+            {
+                throw new InvalidOperationException($"Error updating reservation status with ID {reservationId}.", ex);
+            }
+        }
+
+        private ReservationResponseDto MapReservationToDto(Reservation reservation)
+        {
+            return new ReservationResponseDto
+            {
+                ReservationId = reservation.ReservationId,
+                BookingId = reservation.BookingId,
+                Details = reservation.Details,
+                StartDate = reservation.StartDate,
+                EndDate = reservation.EndDate,
+                Status = reservation.Status,
+                CreatedDate = reservation.CreatedDate
+            };
+        }
     }
 }
