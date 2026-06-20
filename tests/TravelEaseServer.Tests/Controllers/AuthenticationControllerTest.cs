@@ -59,7 +59,7 @@ namespace TravelEaseServer.Tests
                 UserId = 1, 
                 Name = "John Doe", 
                 Email = "test@travelease.com", 
-                Role = 1, 
+                Role = "User", 
                 Token = "mocked-jwt-token" 
             };
 

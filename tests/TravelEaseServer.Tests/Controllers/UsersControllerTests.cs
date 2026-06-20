@@ -46,9 +46,9 @@ namespace TravelEaseServer.Tests.Controllers
         {
             // Arrange
             var searchDto = new UserSearchDto { SearchTerm = "John" };
-            var expectedUsers = new List<UserResponseDto>
+var expectedUsers = new List<UserResponseDto>
             {
-                new() { UserId = 1, Name = "John Doe", Email = "john@example.com", Phone = "12345", Role = 1}
+                new UserResponseDto { UserId = 1, Name = "John Doe", Email = "john@example.com", Phone = "12345", Role = "Traveler" }
             };
  
             _mockUserService.Setup(s => s.GetAllUsersAsync(searchDto))
@@ -113,7 +113,7 @@ namespace TravelEaseServer.Tests.Controllers
         {
             // Arrange
             var requestDto = new UserRequestDto { Name = "Jane", Email = "jane@example.com", Phone = "54321" };
-            var responseDto = new UserResponseDto { UserId = 2, Name = "Jane", Email = "jane@example.com", Phone = "54321", Role = 1 };
+var responseDto = new UserResponseDto { UserId = 2, Name = "Jane", Email = "jane@example.com", Phone = "54321", Role = "Traveler" };
  
             _mockUserService.Setup(s => s.CreateUserAsync(requestDto))
                 .ReturnsAsync(responseDto);
@@ -177,7 +177,7 @@ namespace TravelEaseServer.Tests.Controllers
         {
             // Arrange
             long userId = 1;
-            var responseDto = new UserResponseDto { UserId = userId, Name = "John", Email = "john@example.com", Phone = "123", Role = 1 };
+var responseDto = new UserResponseDto { UserId = userId, Name = "John", Email = "john@example.com", Phone = "123", Role = "Traveler" };
  
             _mockUserService.Setup(s => s.GetUserByIdAsync(userId))
                 .ReturnsAsync(responseDto);
@@ -243,7 +243,7 @@ namespace TravelEaseServer.Tests.Controllers
             // Arrange
             long userId = 1;
             var requestDto = new UserRequestDto { Name = "Updated Name", Email = "up@ex.com", Phone = "111" };
-            var responseDto = new UserResponseDto { UserId = userId, Name = "Updated Name", Email = "up@ex.com", Phone = "111", Role = 1 };
+var responseDto = new UserResponseDto { UserId = userId, Name = "Updated Name", Email = "up@ex.com", Phone = "111", Role = "Traveler" };
  
             _mockUserService.Setup(s => s.UpdateUserAsync(userId, requestDto))
                 .ReturnsAsync(responseDto);
@@ -374,7 +374,7 @@ namespace TravelEaseServer.Tests.Controllers
             // Arrange
             long userId = 1;
             var roleDto = new UserRoleAssignmentDto { UserId = userId, NewRole = 2 };
-            var responseDto = new UserResponseDto { UserId = userId, Name = "User", Email = "u@u.com", Phone = "1", Role = 1 };
+var responseDto = new UserResponseDto { UserId = userId, Name = "User", Email = "u@u.com", Phone = "1", Role = "Traveler" };
  
             _mockUserService.Setup(s => s.AssignRoleAsync(userId, roleDto.NewRole))
                 .ReturnsAsync(responseDto);

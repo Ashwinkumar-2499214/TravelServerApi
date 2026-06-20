@@ -56,7 +56,7 @@ namespace TravelEaseServer.Service.Implementation
                 UserId = user.UserId,
                 Name = user.Name,
                 Email = user.Email,
-                Role = user.Role,
+                Role = ((UserRole)user.Role).ToString(),
                 Token = token
             };
         }

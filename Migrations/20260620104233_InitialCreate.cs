@@ -144,7 +144,8 @@ namespace TravelEaseServer.Migrations
                     OldValues = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     NewValues = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Timestamp = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    IpAddress = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    IpAddress = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    UserId1 = table.Column<long>(type: "bigint", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -153,8 +154,12 @@ namespace TravelEaseServer.Migrations
                         name: "FK_AuditLogs_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
-                        principalColumn: "UserId",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "UserId");
+                    table.ForeignKey(
+                        name: "FK_AuditLogs_Users_UserId1",
+                        column: x => x.UserId1,
+                        principalTable: "Users",
+                        principalColumn: "UserId");
                 });
 
             migrationBuilder.CreateTable(
@@ -353,6 +358,11 @@ namespace TravelEaseServer.Migrations
                 name: "IX_AuditLogs_UserId",
                 table: "AuditLogs",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AuditLogs_UserId1",
+                table: "AuditLogs",
+                column: "UserId1");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Bookings_InventoryId",

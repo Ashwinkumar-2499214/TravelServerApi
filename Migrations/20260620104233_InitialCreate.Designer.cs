@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace TravelEaseServer.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260528052302_InitialCreate")]
+    [Migration("20260620104233_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -19,7 +19,7 @@ namespace TravelEaseServer.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.7")
+                .HasAnnotation("ProductVersion", "10.0.9")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -61,9 +61,14 @@ namespace TravelEaseServer.Migrations
                     b.Property<long>("UserId")
                         .HasColumnType("bigint");
 
+                    b.Property<long?>("UserId1")
+                        .HasColumnType("bigint");
+
                     b.HasKey("AuditLogId");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("UserId1");
 
                     b.ToTable("AuditLogs");
                 });
@@ -562,10 +567,14 @@ namespace TravelEaseServer.Migrations
             modelBuilder.Entity("TravelEaseServer.Model.AuditLog", b =>
                 {
                     b.HasOne("TravelEaseServer.Model.User", "User")
-                        .WithMany("AuditLogs")
+                        .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
+
+                    b.HasOne("TravelEaseServer.Model.User", null)
+                        .WithMany("AuditLogs")
+                        .HasForeignKey("UserId1");
 
                     b.Navigation("User");
                 });

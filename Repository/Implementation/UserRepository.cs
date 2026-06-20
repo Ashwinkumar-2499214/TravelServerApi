@@ -80,7 +80,7 @@ namespace TravelEaseServer.Repository.Implementation
             Name = user.Name,
             Email = user.Email,
             Phone = user.Phone,
-            Role = user.Role,
+            Role = ((TravelEaseServer.Enum.UserRole)user.Role).ToString(),
             IsActive = user.IsActive,
             CreatedDate = user.CreatedDate
         };
