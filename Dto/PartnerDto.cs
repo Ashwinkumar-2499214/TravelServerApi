@@ -35,6 +35,7 @@ namespace TravelEaseServer.Dto
     public class PartnerStatusUpdateDto
     {
         public long PartnerId { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
         public int NewStatus { get; set; }
     }
 }

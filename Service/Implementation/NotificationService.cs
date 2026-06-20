@@ -17,26 +17,19 @@ namespace TravelEaseServer.Service.Implementation
 
         public async Task<NotificationResponseDto> CreateNotificationAsync(NotificationRequestDto notificationDto)
         {
-            try
+            var notification = new Notification
             {
-                var notification = new Notification
-                {
-                    UserId = notificationDto.UserId,
-                    Message = notificationDto.Message,
-                    Category = notificationDto.Category,
-                    Status = (int)Enum.NotificationStatus.Unread,
-                    CreatedDate = DateTime.UtcNow
-                };
+                UserId = notificationDto.UserId,
+                Message = notificationDto.Message,
+                Category = notificationDto.Category,
+                Status = (int)Enum.NotificationStatus.Unread,
+                CreatedDate = DateTime.UtcNow
+            };
 
-                return await _notificationRepository.CreateNotificationAsync(notification);
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException(NotificationConstants.NotificationCreatedSuccess, ex);
-            }
+            return await _notificationRepository.CreateNotificationAsync(notification);
         }
 
-        public async Task<NotificationResponseDto> GetNotificationByIdAsync(long notificationId)
+        public async Task<NotificationResponseDto?> GetNotificationByIdAsync(long notificationId)
         {
             return await _notificationRepository.GetNotificationByIdAsync(notificationId);
         }

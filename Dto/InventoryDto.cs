@@ -33,7 +33,9 @@ namespace TravelEaseServer.Dto
     public class InventoryAvailabilityDto
     {
         public long InventoryId { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("availability")]
         public int NewAvailability { get; set; }
-        public int Status { get; set; }
+        // Status can be omitted by the caller; when null the controller will use the current inventory status
+        public int? Status { get; set; }
     }
 }

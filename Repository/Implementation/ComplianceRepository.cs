@@ -16,215 +16,185 @@ namespace TravelEaseServer.Repository.Implementation
 
         public async Task<ComplianceReportResponseDto> CreateReportAsync(ComplianceReport report)
         {
-            try
-            {
-                _context.ComplianceReports.Add(report);
-                await _context.SaveChangesAsync();
-                return MapComplianceReportToDto(report);
-            }
-            catch (DbUpdateException ex)
-            {
-                throw new InvalidOperationException("Error creating compliance report in database.", ex);
-            }
+            _context.ComplianceReports.Add(report);
+            await _context.SaveChangesAsync();
+            return MapComplianceReportToDto(report);
         }
 
-        public async Task<ComplianceReportResponseDto> GetReportByIdAsync(long reportId)
+        public async Task<ComplianceReportResponseDto?> GetReportByIdAsync(long reportId)
         {
-            try
-            {
-                var report = await _context.ComplianceReports
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(r => r.ComplianceReportId == reportId);
+            var report = await _context.ComplianceReports
+                .AsNoTracking()
+                .FirstOrDefaultAsync(r => r.ComplianceReportId == reportId);
 
-                return report != null ? MapComplianceReportToDto(report) : null;
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Error retrieving compliance report with ID {reportId}.", ex);
-            }
+            return report != null ? MapComplianceReportToDto(report) : null;
         }
 
         public async Task<IEnumerable<ComplianceReportResponseDto>> GetAllReportsAsync(ComplianceReportSearchDto searchDto)
         {
-            try
+            var query = _context.ComplianceReports.AsNoTracking();
+
+            // Apply filters
+            if (!string.IsNullOrWhiteSpace(searchDto.SearchTerm))
             {
-                var query = _context.ComplianceReports.AsNoTracking();
-
-                // Apply filters
-                if (!string.IsNullOrWhiteSpace(searchDto.SearchTerm))
-                {
-                    var term = searchDto.SearchTerm.ToLower();
-                    query = query.Where(r => r.Title.ToLower().Contains(term) ||
-                                           r.Scope.ToLower().Contains(term));
-                }
-
-                if (searchDto.FromDate.HasValue)
-                {
-                    query = query.Where(r => r.GeneratedDate >= searchDto.FromDate.Value);
-                }
-
-                if (searchDto.ToDate.HasValue)
-                {
-                    query = query.Where(r => r.GeneratedDate <= searchDto.ToDate.Value);
-                }
-
-                // Apply pagination
-                int skip = (searchDto.PageNumber - 1) * searchDto.PageSize;
-                var reports = await query
-                    .OrderByDescending(r => r.GeneratedDate)
-                    .Skip(skip)
-                    .Take(searchDto.PageSize)
-                    .ToListAsync();
-
-                return reports.Select(MapComplianceReportToDto);
+                var term = searchDto.SearchTerm.ToLower();
+                query = query.Where(r => r.Title.ToLower().Contains(term) ||
+                                         r.Scope.ToLower().Contains(term));
             }
-            catch (Exception ex)
+
+            if (searchDto.FromDate.HasValue)
             {
-                throw new InvalidOperationException("Error retrieving compliance reports.", ex);
+                query = query.Where(r => r.GeneratedDate >= searchDto.FromDate.Value);
             }
+
+            if (searchDto.ToDate.HasValue)
+            {
+                query = query.Where(r => r.GeneratedDate <= searchDto.ToDate.Value);
+            }
+
+            // Apply pagination
+            int skip = (searchDto.PageNumber - 1) * searchDto.PageSize;
+            var reports = await query
+                .OrderByDescending(r => r.GeneratedDate)
+                .Skip(skip)
+                .Take(searchDto.PageSize)
+                .ToListAsync();
+
+            return reports.Select(MapComplianceReportToDto);
+        }
+        public async Task<int> GetTotalInvoicesCountAsync(DateTime fromDate, DateTime toDate)
+        {
+           
+            return await _context.Invoices
+                .AsNoTracking()
+                .Where(i => i.InvoiceDate >= fromDate && i.InvoiceDate <= toDate)
+                .CountAsync();
+        }
+
+        public async Task<int> GetFinancialDiscrepanciesCountAsync(DateTime fromDate, DateTime toDate)
+        {
+            return await _context.Invoices
+                .AsNoTracking()
+                .Where(i => i.InvoiceDate >= fromDate && i.InvoiceDate <= toDate)
+                .CountAsync(i => _context.Payments
+
+                    .Where(p => p.InvoiceId == i.InvoiceId && p.Status == 1)
+                    .Sum(p => p.Amount) != i.Amount);
         }
 
         public async Task<bool> DeleteReportAsync(long reportId)
         {
-            try
+            var report = await _context.ComplianceReports.FirstOrDefaultAsync(r => r.ComplianceReportId == reportId);
+            if (report == null)
             {
-                var report = await _context.ComplianceReports.FirstOrDefaultAsync(r => r.ComplianceReportId == reportId);
-                if (report == null)
-                {
-                    return false;
-                }
+                return false;
+            }
 
-                _context.ComplianceReports.Remove(report);
-                await _context.SaveChangesAsync();
-                return true;
-            }
-            catch (DbUpdateException ex)
-            {
-                throw new InvalidOperationException($"Error deleting compliance report with ID {reportId}.", ex);
-            }
+            _context.ComplianceReports.Remove(report);
+            await _context.SaveChangesAsync();
+            return true;
         }
 
         public async Task<IEnumerable<AuditLogResponseDto>> GetAuditLogsAsync(AuditLogSearchDto searchDto)
         {
-            try
+            var query = _context.AuditLogs.AsNoTracking();
+
+            // Apply filters
+            if (searchDto.UserId.HasValue)
             {
-                var query = _context.AuditLogs.AsNoTracking();
-
-                // Apply filters
-                if (searchDto.UserId.HasValue)
-                {
-                    query = query.Where(a => a.UserId == searchDto.UserId.Value);
-                }
-
-                if (!string.IsNullOrWhiteSpace(searchDto.EntityType))
-                {
-                    query = query.Where(a => a.EntityType.ToLower() == searchDto.EntityType.ToLower());
-                }
-
-                if (!string.IsNullOrWhiteSpace(searchDto.Action))
-                {
-                    query = query.Where(a => a.Action.ToLower().Contains(searchDto.Action.ToLower()));
-                }
-
-                if (searchDto.FromDate.HasValue)
-                {
-                    query = query.Where(a => a.Timestamp >= searchDto.FromDate.Value);
-                }
-
-                if (searchDto.ToDate.HasValue)
-                {
-                    query = query.Where(a => a.Timestamp <= searchDto.ToDate.Value);
-                }
-
-                // Apply pagination
-                int skip = (searchDto.PageNumber - 1) * searchDto.PageSize;
-                var auditLogs = await query
-                    .OrderByDescending(a => a.Timestamp)
-                    .Skip(skip)
-                    .Take(searchDto.PageSize)
-                    .ToListAsync();
-
-                return auditLogs.Select(MapAuditLogToDto);
+                query = query.Where(a => a.UserId == searchDto.UserId.Value);
             }
-            catch (Exception ex)
+
+            if (!string.IsNullOrWhiteSpace(searchDto.EntityType))
             {
-                throw new InvalidOperationException("Error retrieving audit logs.", ex);
+                // Production Optimization: EF core natively translates StringComparison or normal comparison efficiently.
+                var type = searchDto.EntityType.ToLower();
+                query = query.Where(a => a.EntityType.ToLower() == type);
             }
+
+            if (!string.IsNullOrWhiteSpace(searchDto.Action))
+            {
+                var action = searchDto.Action.ToLower();
+                query = query.Where(a => a.Action.ToLower().Contains(action));
+            }
+
+            if (searchDto.FromDate.HasValue)
+            {
+                query = query.Where(a => a.Timestamp >= searchDto.FromDate.Value);
+            }
+
+            if (searchDto.ToDate.HasValue)
+            {
+                query = query.Where(a => a.Timestamp <= searchDto.ToDate.Value);
+            }
+
+            // Apply pagination
+            int skip = (searchDto.PageNumber - 1) * searchDto.PageSize;
+            var auditLogs = await query
+                .OrderByDescending(a => a.Timestamp)
+                .Skip(skip)
+                .Take(searchDto.PageSize)
+                .ToListAsync();
+
+            return auditLogs.Select(MapAuditLogToDto);
         }
 
-        public async Task<RetentionPolicyDto> GetRetentionPolicyAsync(long policyId)
+        public async Task<RetentionPolicyDto?> GetRetentionPolicyAsync(long policyId)
         {
-            try
-            {
-                var policy = await _context.RetentionPolicies
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(p => p.RetentionPolicyId == policyId);
+            var policy = await _context.RetentionPolicies
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.RetentionPolicyId == policyId);
 
-                return policy != null ? MapRetentionPolicyToDto(policy) : null;
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Error retrieving retention policy with ID {policyId}.", ex);
-            }
+            return policy != null ? MapRetentionPolicyToDto(policy) : null;
         }
 
         public async Task<IEnumerable<RetentionPolicyDto>> GetAllRetentionPoliciesAsync()
         {
-            try
-            {
-                var policies = await _context.RetentionPolicies
-                    .AsNoTracking()
-                    .ToListAsync();
+            var policies = await _context.RetentionPolicies
+                .AsNoTracking()
+                .ToListAsync();
 
-                return policies.Select(MapRetentionPolicyToDto);
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException("Error retrieving retention policies.", ex);
-            }
+            return policies.Select(MapRetentionPolicyToDto);
         }
 
         public async Task<RetentionPolicyDto> UpdateRetentionPolicyAsync(RetentionPolicy policy)
         {
-            try
+            var existingPolicy = await _context.RetentionPolicies
+                .FirstOrDefaultAsync(p => p.RetentionPolicyId == policy.RetentionPolicyId);
+
+            if (existingPolicy == null)
             {
-                var existingPolicy = await _context.RetentionPolicies.FirstOrDefaultAsync(p => p.RetentionPolicyId == policy.RetentionPolicyId);
-                if (existingPolicy == null)
-                {
-                    throw new KeyNotFoundException($"Retention policy with ID {policy.RetentionPolicyId} not found.");
-                }
-
-                existingPolicy.DataType = policy.DataType;
-                existingPolicy.RetentionDays = policy.RetentionDays;
-                existingPolicy.Description = policy.Description;
-                existingPolicy.IsActive = policy.IsActive;
-
-                _context.RetentionPolicies.Update(existingPolicy);
-                await _context.SaveChangesAsync();
-
-                return MapRetentionPolicyToDto(existingPolicy);
+                throw new KeyNotFoundException($"Retention policy with ID {policy.RetentionPolicyId} not found.");
             }
-            catch (DbUpdateException ex)
-            {
-                throw new InvalidOperationException($"Error updating retention policy with ID {policy.RetentionPolicyId}.", ex);
-            }
+
+            existingPolicy.DataType = policy.DataType;
+            existingPolicy.RetentionDays = policy.RetentionDays;
+            existingPolicy.Description = policy.Description;
+            existingPolicy.IsActive = policy.IsActive;
+
+            // Explicit context.Update() is redundant because EF Core tracks alterations to 'existingPolicy'
+            await _context.SaveChangesAsync();
+
+            return MapRetentionPolicyToDto(existingPolicy);
         }
 
         public async Task<bool> LogAuditEventAsync(AuditLog auditLog)
         {
-            try
-            {
-                _context.AuditLogs.Add(auditLog);
-                await _context.SaveChangesAsync();
-                return true;
-            }
-            catch (DbUpdateException ex)
-            {
-                throw new InvalidOperationException("Error logging audit event.", ex);
-            }
+            _context.AuditLogs.Add(auditLog);
+            await _context.SaveChangesAsync();
+            return true;
         }
 
-        private ComplianceReportResponseDto MapComplianceReportToDto(ComplianceReport report)
+        public async Task<int> GetAuditLogsCountAsync(DateTime startDate, DateTime endDate)
+        {
+            return await _context.AuditLogs
+                .AsNoTracking()
+                .Where(a => a.Timestamp >= startDate && a.Timestamp <= endDate)
+                .CountAsync();
+        }
+
+        private static ComplianceReportResponseDto MapComplianceReportToDto(ComplianceReport report)
+
         {
             return new ComplianceReportResponseDto
             {
@@ -237,7 +207,7 @@ namespace TravelEaseServer.Repository.Implementation
             };
         }
 
-        private AuditLogResponseDto MapAuditLogToDto(AuditLog auditLog)
+        private static AuditLogResponseDto MapAuditLogToDto(AuditLog auditLog)
         {
             return new AuditLogResponseDto
             {
@@ -253,7 +223,7 @@ namespace TravelEaseServer.Repository.Implementation
             };
         }
 
-        private RetentionPolicyDto MapRetentionPolicyToDto(RetentionPolicy policy)
+        private static RetentionPolicyDto MapRetentionPolicyToDto(RetentionPolicy policy)
         {
             return new RetentionPolicyDto
             {

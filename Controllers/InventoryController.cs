@@ -98,12 +98,37 @@ public class InventoryController : ControllerBase
     [HttpPatch("/api/v1/inventory/{inventoryId}/availability")]
     public async Task<IActionResult> UpdateAvailability(long inventoryId, [FromBody] InventoryAvailabilityDto dto)
     {
-        if (inventoryId <= 0 || !ModelState.IsValid || dto == null || dto.NewAvailability < 0 || dto.Status <= 0)
+        if (inventoryId <= 0 || !ModelState.IsValid || dto == null || dto.NewAvailability < 0)
         {
             return BadRequest(new { message = GeneralConstants.InvalidInput });
         }
 
-        var data = await _inventoryService.UpdateAvailabilityAsync(inventoryId, dto.NewAvailability, dto.Status);
+        // If caller omitted Status, use current inventory status
+        int status;
+        if (dto.Status.HasValue)
+        {
+            status = dto.Status.Value;
+            if (status <= 0)
+            {
+                return BadRequest(new { message = GeneralConstants.InvalidInput });
+            }
+        }
+        else
+        {
+            var existing = await _inventoryService.GetInventoryByIdAsync(inventoryId);
+            if (existing == null)
+            {
+                return NotFound(new { message = InventoryConstants.InventoryNotFound });
+            }
+
+            status = existing.Status;
+            if (status <= 0)
+            {
+                return BadRequest(new { message = GeneralConstants.InvalidInput });
+            }
+        }
+
+        var data = await _inventoryService.UpdateAvailabilityAsync(inventoryId, dto.NewAvailability, status);
 
         return data != null
             ? Ok(new { message = InventoryConstants.AvailabilityUpdateSuccess, data })

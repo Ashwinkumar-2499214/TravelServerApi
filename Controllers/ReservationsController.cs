@@ -8,7 +8,6 @@ namespace TravelEaseServer.Controllers
 {
     [ApiController]
     [Route("api/v1/[controller]")]
-    [Authorize]
     public class ReservationsController : ControllerBase
     {
         private readonly IReservationService _reservationService;
@@ -19,7 +18,6 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Admin,Partner")]
         public async Task<IActionResult> GetAllReservations([FromQuery] ReservationSearchDto searchDto)
         {
             return (ModelState.IsValid && searchDto != null)
@@ -28,7 +26,6 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "User")]
         public async Task<IActionResult> CreateReservation([FromBody] ReservationRequestDto reservationDto)
         {
             return (ModelState.IsValid && reservationDto != null)
@@ -37,21 +34,19 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpGet("{reservationId}")]
-        [Authorize(Roles = "Admin,User,Partner")]
         public async Task<IActionResult> GetReservationById(long reservationId)
         {
             return Ok(new { message = GeneralConstants.OperationSuccess, data = await _reservationService.GetReservationByIdAsync(reservationId) });
         }
 
         [HttpGet("/api/v1/bookings/{bookingId}/reservations")]
-        [Authorize(Roles = "Admin,User,Partner")]
+        
         public async Task<IActionResult> GetBookingReservations(long bookingId)
         {
             return Ok(new { message = GeneralConstants.OperationSuccess, data = await _reservationService.GetBookingReservationsAsync(bookingId) });
         }
 
         [HttpPut("{reservationId}")]
-        [Authorize(Roles = "Admin,Partner")]
         public async Task<IActionResult> UpdateReservation(long reservationId, [FromBody] ReservationRequestDto reservationDto)
         {
             return (ModelState.IsValid && reservationDto != null)
@@ -60,7 +55,6 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpDelete("{reservationId}")]
-        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteReservation(long reservationId)
         {
             return await _reservationService.DeleteReservationAsync(reservationId)
@@ -69,7 +63,6 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpPatch("{reservationId}/status")]
-        [Authorize(Roles = "Admin,Partner")]
         public async Task<IActionResult> UpdateReservationStatus(long reservationId, [FromBody] ReservationStatusUpdateDto statusDto)
         {
             return (ModelState.IsValid && statusDto != null)

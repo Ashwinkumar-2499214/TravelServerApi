@@ -1,10 +1,12 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TravelEaseServer.Model
 {
     public class Booking
     {
         [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public long BookingId { get; set; }
         public long UserId { get; set; }
         public long PartnerId { get; set; }

@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+
 using TravelEaseServer.Constant;
 using TravelEaseServer.Dto;
 using TravelEaseServer.Service.Interface;
@@ -7,6 +9,7 @@ namespace TravelEaseServer.Controllers
 {
     [ApiController]
     [Route("api/v1/[controller]")]
+    [Authorize(Roles = "ComplianceOfficer")]
     public class NotificationsController : ControllerBase
     {
         private readonly INotificationService _notificationService;
@@ -16,46 +19,66 @@ namespace TravelEaseServer.Controllers
             _notificationService = notificationService;
         }
 
-        [HttpGet("/api/v1/users/{userId}/notifications")]
-        public async Task<IActionResult> GetUserNotifications(long userId)
+        [HttpGet("~/api/v1/users/{userId}/notifications")]
+        public async Task<IActionResult> GetUserNotifications([FromRoute] long userId)
         {
-            return Ok(new { message = GeneralConstants.OperationSuccess, data = await _notificationService.GetUserNotificationsAsync(userId) });
+            var notifications = await _notificationService.GetUserNotificationsAsync(userId);
+            return Ok(new { message = GeneralConstants.OperationSuccess, data = notifications });
         }
 
         [HttpPost]
         public async Task<IActionResult> CreateNotification([FromBody] NotificationRequestDto notificationDto)
         {
-            return (ModelState.IsValid && notificationDto != null)
-                ? Ok(new { message = NotificationConstants.NotificationCreatedSuccess, data = await _notificationService.CreateNotificationAsync(notificationDto) })
-                : BadRequest(new { message = GeneralConstants.InvalidInput });
+            if (notificationDto == null || notificationDto.UserId <= 0 || string.IsNullOrWhiteSpace(notificationDto.Message))
+            {
+                return BadRequest(new { message = GeneralConstants.InvalidInput });
+            }
+
+            var result = await _notificationService.CreateNotificationAsync(notificationDto);
+            return Ok(new { message = NotificationConstants.NotificationCreatedSuccess, data = result });
         }
 
-        [HttpGet("{notificationId}")]
-        public async Task<IActionResult> GetNotificationById(long notificationId)
+        [HttpGet("{notificationId:long}")]
+        public async Task<IActionResult> GetNotificationById([FromRoute] long notificationId)
         {
-            return Ok(new { message = GeneralConstants.OperationSuccess, data = await _notificationService.GetNotificationByIdAsync(notificationId) });
+            var notification = await _notificationService.GetNotificationByIdAsync(notificationId);
+            return Ok(new { message = GeneralConstants.OperationSuccess, data = notification });
         }
 
-        [HttpDelete("{notificationId}")]
-        public async Task<IActionResult> DeleteNotification(long notificationId)
+        [HttpDelete("{notificationId:long}")]
+        public async Task<IActionResult> DeleteNotification([FromRoute] long notificationId)
         {
-            return await _notificationService.DeleteNotificationAsync(notificationId)
-                ? Ok(new { message = NotificationConstants.NotificationDeleteSuccess })
-                : BadRequest(new { message = NotificationConstants.NotificationNotFound });
+            var isDeleted = await _notificationService.DeleteNotificationAsync(notificationId);
+            if (!isDeleted)
+            {
+                return BadRequest(new { message = NotificationConstants.NotificationNotFound });
+            }
+
+            return Ok(new { message = NotificationConstants.NotificationDeleteSuccess });
         }
 
-        [HttpPut("{notificationId}/read")]
-        public async Task<IActionResult> MarkAsRead(long notificationId)
+        [HttpPatch("{notificationId:long}/read")]
+        public async Task<IActionResult> MarkAsRead([FromRoute] long notificationId)
         {
-            return Ok(new { message = NotificationConstants.NotificationMarkedAsRead, data = await _notificationService.MarkAsReadAsync(notificationId) });
+            var result = await _notificationService.MarkAsReadAsync(notificationId);
+            if (result == null)
+            {
+                return BadRequest(new { message = NotificationConstants.NotificationNotFound });
+            }
+
+            return Ok(new { message = NotificationConstants.NotificationMarkedAsRead });
         }
 
-        [HttpPut("/api/v1/users/{userId}/notifications/read-all")]
-        public async Task<IActionResult> MarkAllAsRead(long userId)
+        [HttpPatch("~/api/v1/users/{userId}/notifications/read-all")]
+        public async Task<IActionResult> MarkAllAsRead([FromRoute] long userId)
         {
-            return await _notificationService.MarkAllAsReadAsync(userId)
-                ? Ok(new { message = NotificationConstants.AllNotificationsMarkedAsRead })
-                : BadRequest(new { message = GeneralConstants.OperationFailed });
+            var isSuccess = await _notificationService.MarkAllAsReadAsync(userId);
+            if (!isSuccess)
+            {
+                return BadRequest(new { message = GeneralConstants.OperationFailed });
+            }
+
+            return Ok(new { message = NotificationConstants.AllNotificationsMarkedAsRead });
         }
     }
 }

@@ -12,7 +12,10 @@ namespace TravelEaseServer.Repository.Interface
         Task<IEnumerable<AuditLogResponseDto>> GetAuditLogsAsync(AuditLogSearchDto searchDto);
         Task<RetentionPolicyDto> GetRetentionPolicyAsync(long policyId);
         Task<IEnumerable<RetentionPolicyDto>> GetAllRetentionPoliciesAsync();
+        Task<int> GetAuditLogsCountAsync(DateTime startDate, DateTime endDate);
         Task<RetentionPolicyDto> UpdateRetentionPolicyAsync(RetentionPolicy policy);
         Task<bool> LogAuditEventAsync(AuditLog auditLog);
+        Task<int> GetTotalInvoicesCountAsync(DateTime fromDate, DateTime toDate);
+        Task<int> GetFinancialDiscrepanciesCountAsync(DateTime fromDate, DateTime toDate);
     }
 }

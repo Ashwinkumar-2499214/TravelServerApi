@@ -34,10 +34,16 @@ namespace TravelEaseServer.Controllers
         [HttpPost("/api/v1/invoices/{invoiceId}/payments")]
         public async Task<IActionResult> CreatePayment(long invoiceId, [FromBody] PaymentRequestDto paymentDto)
         {
-            return ModelState.IsValid && paymentDto != null
-                ? Ok(new { message = PaymentConstants.PaymentCreatedSuccess, data = await _paymentService.CreatePaymentAsync(paymentDto) })
-                : BadRequest(new { message = GeneralConstants.InvalidInput });
+            if (!ModelState.IsValid || paymentDto == null)
+                return BadRequest(new { message = GeneralConstants.InvalidInput });
+
+            paymentDto.InvoiceId = invoiceId; 
+
+            var data = await _paymentService.CreatePaymentAsync(paymentDto);
+            return Ok(new { message = PaymentConstants.PaymentCreatedSuccess, data });
         }
+
+
 
         [HttpGet("{paymentId}")]
         public async Task<IActionResult> GetPaymentById(long paymentId)

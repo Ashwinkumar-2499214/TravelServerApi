@@ -11,7 +11,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
-// JWT Authentication
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = "Bearer";
@@ -84,6 +83,14 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
+
+builder.Services.AddHttpContextAccessor();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -95,7 +102,7 @@ app.UseHttpsRedirection();
 app.UseCors("AllowAll");
 
 app.UseExceptionHandler(opt => opt.Run(TravelEaseServer.Middleware.GlobalExceptionHandler.HandleAsync));
-
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 

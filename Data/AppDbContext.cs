@@ -31,26 +31,23 @@ public class AppDbContext : DbContext
         .WithMany(u => u.AuditLogs)
         .HasForeignKey(a => a.UserId);
 
-    // 1. Booking -> User (Keep Cascade if you want, or Restrict if it collides with Itinerary)
     modelBuilder.Entity<Booking>()
         .HasOne(b => b.User)
         .WithMany(u => u.Bookings)
         .HasForeignKey(b => b.UserId)
-        .OnDelete(DeleteBehavior.Restrict); // Changed to Restrict
+        .OnDelete(DeleteBehavior.Restrict); 
 
-    // 2. Booking -> Partner (Your original fix)
     modelBuilder.Entity<Booking>()
         .HasOne(b => b.Partner)
         .WithMany(p => p.Bookings)
         .HasForeignKey(b => b.PartnerId)
         .OnDelete(DeleteBehavior.Restrict); 
 
-    // 3. Booking -> Inventory (CRITICAL: Breaks the Partner -> Inventory -> Booking path)
     modelBuilder.Entity<Booking>()
         .HasOne(b => b.Inventory)
         .WithMany(i => i.Bookings)
         .HasForeignKey(b => b.InventoryId)
-        .OnDelete(DeleteBehavior.Restrict); // Changed to Restrict
+        .OnDelete(DeleteBehavior.Restrict); 
 
     modelBuilder.Entity<Inventory>()
         .HasOne(i => i.Partner)
@@ -67,13 +64,11 @@ public class AppDbContext : DbContext
         .WithMany()
         .HasForeignKey(i => i.UserId);
 
-    // 4. ItineraryBooking -> Itinerary & Booking
-    // These link tables are notorious for causing multiple cascade paths
     modelBuilder.Entity<ItineraryBooking>()
         .HasOne(ib => ib.Itinerary)
         .WithMany(i => i.ItineraryBookings)
         .HasForeignKey(ib => ib.ItineraryId)
-        .OnDelete(DeleteBehavior.Restrict); // Changed to Restrict
+        .OnDelete(DeleteBehavior.Restrict); 
 
     modelBuilder.Entity<ItineraryBooking>()
         .HasOne(ib => ib.Booking)
@@ -89,9 +84,14 @@ public class AppDbContext : DbContext
         .HasOne(p => p.Invoice)
         .WithMany(inv => inv.Payments)
         .HasForeignKey(p => p.InvoiceId);
+    
+    modelBuilder.Entity<AuditLog>()
+        .HasOne(a => a.User)
+        .WithMany()
+        .HasForeignKey(a => a.UserId)
+        .OnDelete(DeleteBehavior.NoAction);
 }
 
-    // FIX: Automatically sets precision for all decimal types globally, solving the scale truncation warnings
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         configurationBuilder.Properties<decimal>().HavePrecision(18, 2);

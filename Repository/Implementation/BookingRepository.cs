@@ -24,7 +24,8 @@ namespace TravelEaseServer.Repository.Implementation
             }
             catch (DbUpdateException ex)
             {
-                throw new InvalidOperationException("Error creating booking in database.", ex);
+                var sqlErrorMessage = ex.InnerException?.Message ?? ex.Message;
+                throw new InvalidOperationException($"Database Rejected: {sqlErrorMessage}", ex);
             }
         }
 

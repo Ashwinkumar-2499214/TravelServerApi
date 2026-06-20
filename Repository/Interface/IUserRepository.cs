@@ -5,11 +5,13 @@ namespace TravelEaseServer.Repository.Interface
 {
     public interface IUserRepository
     {
+        Task<User?> GetTrackedUserByIdAsync(long userId);
+        Task SaveAuditLogAsync(AuditLog auditLog);
         Task<UserResponseDto> CreateUserAsync(User user);
-        Task<UserResponseDto> GetUserByIdAsync(long userId);
+        Task<UserResponseDto?> GetUserByIdAsync(long userId);
         Task<IEnumerable<UserResponseDto>> GetAllUsersAsync(UserSearchDto searchDto);
         Task<UserResponseDto> UpdateUserAsync(User user);
         Task<bool> DeleteUserAsync(long userId);
-        Task<User> GetUserByEmailAsync(string email);
+        Task<User?> GetUserByEmailAsync(string email);
     }
 }

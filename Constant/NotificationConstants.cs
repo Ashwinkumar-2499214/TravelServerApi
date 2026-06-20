@@ -12,5 +12,6 @@ namespace TravelEaseServer.Constant
         public const string BookingCancellationSubject = "Your booking has been cancelled";
         public const string PaymentReminderSubject = "Payment reminder for your booking";
         public const string PaymentConfirmationSubject = "Payment received successfully";
+        public const string UserNotFound = "User not found";
     }
 }

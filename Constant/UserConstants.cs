@@ -8,6 +8,7 @@ namespace TravelEaseServer.Constant
         public const string UserDeleteSuccess = "User deleted successfully";
         public const string RoleAssignmentSuccess = "Role assigned successfully";
         public const string UserAlreadyExists = "User already exists";
+        public const string EmailAlreadyExists = "Email already exists";
         public const string InvalidUserRole = "Invalid user role";
         public const string InvalidEmail = "Invalid email format";
     }

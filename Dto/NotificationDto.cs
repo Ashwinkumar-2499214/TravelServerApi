@@ -1,3 +1,5 @@
+using TravelEaseServer.Enum;
+
 namespace TravelEaseServer.Dto
 {
     public class NotificationRequestDto
@@ -12,8 +14,8 @@ namespace TravelEaseServer.Dto
         public long NotificationId { get; set; }
         public long UserId { get; set; }
         public string Message { get; set; }
-        public int Category { get; set; }
-        public int Status { get; set; }
+        public NotificationCategory Category { get; set; }
+        public NotificationStatus Status { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime? ReadDate { get; set; }
     }
