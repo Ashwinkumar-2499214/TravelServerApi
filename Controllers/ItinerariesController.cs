@@ -1,13 +1,14 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TravelEaseServer.Constant;
 using TravelEaseServer.Dto;
 using TravelEaseServer.Service.Interface;
-using Microsoft.AspNetCore.Authorization;
 
 namespace TravelEaseServer.Controllers
 {
     [ApiController]
     [Route("api/v1/[controller]")]
+    [Authorize]
     public class ItinerariesController : ControllerBase
     {
         private readonly IItineraryService _itineraryService;
@@ -18,6 +19,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager")]
         public async Task<IActionResult> GetAllItineraries([FromQuery] ItinerarySearchDto searchDto)
         {
             if (!ModelState.IsValid || searchDto == null)
@@ -30,6 +32,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin,Traveler,TravelAgent,CorporateTravelManager")]
         public async Task<IActionResult> CreateItinerary([FromBody] ItineraryRequestDto itineraryDto)
         {
             if (!ModelState.IsValid || itineraryDto == null)
@@ -42,9 +45,9 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpGet("{itineraryId}")]
+        [Authorize(Roles = "Admin,Traveler,TravelAgent,CorporateTravelManager")]
         public async Task<IActionResult> GetItineraryById(long itineraryId)
         {
-            // If condition to handle basic parameter validation
             if (itineraryId <= 0)
             {
                 return BadRequest(new { message = GeneralConstants.InvalidInput });
@@ -55,6 +58,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpPut("{itineraryId}")]
+        [Authorize(Roles = "Admin,Traveler,TravelAgent,CorporateTravelManager")]
         public async Task<IActionResult> UpdateItinerary(long itineraryId, [FromBody] ItineraryRequestDto itineraryDto)
         {
             if (!ModelState.IsValid || itineraryDto == null || itineraryId <= 0)
@@ -67,6 +71,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpDelete("{itineraryId}")]
+        [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager")]
         public async Task<IActionResult> DeleteItinerary(long itineraryId)
         {
             if (itineraryId <= 0)
@@ -84,6 +89,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpPatch("{itineraryId}/status")]
+        [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager,ComplianceOfficer")]
         public async Task<IActionResult> UpdateItineraryStatus(long itineraryId, [FromBody] ItineraryStatusUpdateDto statusDto)
         {
             if (!ModelState.IsValid || statusDto == null || itineraryId <= 0)
@@ -96,6 +102,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpPost("{itineraryId}/bookings")]
+        [Authorize(Roles = "Admin,Traveler,TravelAgent,CorporateTravelManager")]
         public async Task<IActionResult> AddBookingToItinerary(long itineraryId, [FromBody] ItineraryBookingAddDto bookingDto)
         {
             if (!ModelState.IsValid || bookingDto == null || itineraryId <= 0)
@@ -113,6 +120,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpDelete("{itineraryId}/bookings/{bookingId}")]
+        [Authorize(Roles = "Admin,Traveler,TravelAgent,CorporateTravelManager")]
         public async Task<IActionResult> RemoveBookingFromItinerary(long itineraryId, long bookingId)
         {
             if (itineraryId <= 0 || bookingId <= 0)

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TravelEaseServer.Constant;
 using TravelEaseServer.Dto;
@@ -7,7 +8,7 @@ namespace TravelEaseServer.Controllers;
 
 [ApiController]
 [Route("api/v1/analytics")]
-
+[Authorize]
 public class AnalyticsController : ControllerBase
 {
     private readonly IAnalyticsService _analyticsService;
@@ -18,6 +19,7 @@ public class AnalyticsController : ControllerBase
     }
 
     [HttpGet("kpi-reports")]
+    [Authorize(Roles = "Admin,CorporateTravelManager,ComplianceOfficer")]
     public async Task<IActionResult> GetAllKPIReports([FromQuery] KPIReportSearchDto searchDto)
     {
         if (!ModelState.IsValid || searchDto == null)
@@ -33,6 +35,7 @@ public class AnalyticsController : ControllerBase
     }
 
     [HttpPost("kpi-reports")]
+    [Authorize(Roles = "Admin,CorporateTravelManager")]
     public async Task<IActionResult> CreateKPIReport([FromBody] KPIReportRequestDto reportDto)
     {
         if (!ModelState.IsValid || reportDto == null)
@@ -48,6 +51,7 @@ public class AnalyticsController : ControllerBase
     }
 
     [HttpGet("kpi-reports/{reportId}")]
+    [Authorize(Roles = "Admin,CorporateTravelManager,ComplianceOfficer")]
     public async Task<IActionResult> GetKPIReportById(long reportId)
     {
         if (reportId <= 0)
@@ -63,6 +67,7 @@ public class AnalyticsController : ControllerBase
     }
 
     [HttpDelete("kpi-reports/{reportId}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteKPIReport(long reportId)
     {
         if (reportId <= 0)
@@ -78,6 +83,7 @@ public class AnalyticsController : ControllerBase
     }
 
     [HttpGet("dashboards/travel-spend")]
+    [Authorize(Roles = "Admin,FinanceOfficer,CorporateTravelManager")]
     public async Task<IActionResult> GetTravelSpendDashboard()
     {
         var data = await _analyticsService.GetTravelSpendDashboardAsync();
@@ -88,6 +94,7 @@ public class AnalyticsController : ControllerBase
     }
 
     [HttpGet("dashboards/booking-volume")]
+    [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager")]
     public async Task<IActionResult> GetBookingVolumeDashboard()
     {
         var data = await _analyticsService.GetBookingVolumeDashboardAsync();
@@ -98,6 +105,7 @@ public class AnalyticsController : ControllerBase
     }
 
     [HttpGet("dashboards/cancellations")]
+    [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager,ComplianceOfficer")]
     public async Task<IActionResult> GetCancellationDashboard()
     {
         var data = await _analyticsService.GetCancellationDashboardAsync();
@@ -108,6 +116,7 @@ public class AnalyticsController : ControllerBase
     }
 
     [HttpGet("trends/spend-per-traveler")]
+    [Authorize(Roles = "Admin,FinanceOfficer,CorporateTravelManager")]
     public async Task<IActionResult> GetSpendPerTravelerTrend()
     {
         var data = await _analyticsService.GetSpendPerTravelerTrendAsync();
@@ -118,6 +127,7 @@ public class AnalyticsController : ControllerBase
     }
 
     [HttpGet("trends/destinations")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetDestinationTrend()
     {
         var data = await _analyticsService.GetDestinationTrendAsync();

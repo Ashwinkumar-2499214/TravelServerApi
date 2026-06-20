@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TravelEaseServer.Constant;
 using TravelEaseServer.Dto;
@@ -7,6 +8,7 @@ namespace TravelEaseServer.Controllers;
 
 [ApiController]
 [Route("api/v1/[controller]")]
+[Authorize]
 public class InventoryController : ControllerBase
 {
     private readonly IInventoryService _inventoryService;
@@ -17,6 +19,7 @@ public class InventoryController : ControllerBase
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetAllInventory([FromQuery] InventorySearchDto searchDto)
     {
         if (!ModelState.IsValid || searchDto == null)
@@ -32,6 +35,7 @@ public class InventoryController : ControllerBase
     }
 
     [HttpGet("/api/v1/partners/{partnerId}/inventory")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetPartnerInventory(long partnerId)
     {
         if (partnerId <= 0)
@@ -47,6 +51,7 @@ public class InventoryController : ControllerBase
     }
 
     [HttpPost("/api/v1/partners/{partnerId}/inventory")]
+    [Authorize(Roles = "Admin,TravelAgent")]
     public async Task<IActionResult> CreatePartnerInventory(long partnerId, [FromBody] InventoryRequestDto inventoryDto)
     {
         if (partnerId <= 0 || !ModelState.IsValid || inventoryDto == null)
@@ -63,6 +68,7 @@ public class InventoryController : ControllerBase
     }
 
     [HttpPut("/api/v1/partners/{partnerId}/inventory/{inventoryId}")]
+    [Authorize(Roles = "Admin,TravelAgent")]
     public async Task<IActionResult> UpdatePartnerInventory(long partnerId, long inventoryId, [FromBody] InventoryRequestDto inventoryDto)
     {
         if (partnerId <= 0 || inventoryId <= 0 || !ModelState.IsValid || inventoryDto == null || 
@@ -81,6 +87,7 @@ public class InventoryController : ControllerBase
     }
 
     [HttpDelete("/api/v1/partners/{partnerId}/inventory/{inventoryId}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeletePartnerInventory(long partnerId, long inventoryId)
     {
         if (partnerId <= 0 || inventoryId <= 0)
@@ -96,6 +103,7 @@ public class InventoryController : ControllerBase
     }
 
     [HttpPatch("/api/v1/inventory/{inventoryId}/availability")]
+    [Authorize(Roles = "Admin,TravelAgent")]
     public async Task<IActionResult> UpdateAvailability(long inventoryId, [FromBody] InventoryAvailabilityDto dto)
     {
         if (inventoryId <= 0 || !ModelState.IsValid || dto == null || dto.NewAvailability < 0)
@@ -103,7 +111,6 @@ public class InventoryController : ControllerBase
             return BadRequest(new { message = GeneralConstants.InvalidInput });
         }
 
-        // If caller omitted Status, use current inventory status
         int status;
         if (dto.Status.HasValue)
         {

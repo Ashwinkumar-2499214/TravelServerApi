@@ -7,7 +7,8 @@ using TravelEaseServer.Service.Interface;
 namespace TravelEaseServer.Controllers;
 
 [ApiController]
-[Route("api/v1/auth")] 
+[Route("api/v1/auth")]
+[Authorize]
 public class AuthenticationController : ControllerBase
 {
     private readonly IAuthenticationService _authenticationService;
@@ -18,7 +19,8 @@ public class AuthenticationController : ControllerBase
     }
 
     [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequestDto loginDto)
+    [AllowAnonymous]
+    public async Task<IActionResult> Login([FromBody] LoginRequestDto loginDto)
     {
         if (loginDto == null || string.IsNullOrWhiteSpace(loginDto.Email) || string.IsNullOrWhiteSpace(loginDto.Password))
         {
@@ -48,6 +50,7 @@ public class AuthenticationController : ControllerBase
     }
 
     [HttpPost("reset-password")]
+    [AllowAnonymous]
     public async Task<IActionResult> ResetPassword([FromBody] PasswordResetDto resetDto)
     {
         if (resetDto == null)

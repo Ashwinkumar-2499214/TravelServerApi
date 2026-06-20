@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TravelEaseServer.Constant;
 using TravelEaseServer.Dto;
@@ -7,6 +8,7 @@ namespace TravelEaseServer.Controllers;
 
 [ApiController]
 [Route("api/v1/[controller]")]
+[Authorize] 
 public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
@@ -17,6 +19,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetAllUsers([FromQuery] UserSearchDto searchDto)
     {
         if (searchDto == null)
@@ -32,6 +35,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("register")]
+    [AllowAnonymous] 
     public async Task<IActionResult> RegisterUser([FromBody] UserRequestDto userDto)
     {
         if (userDto == null)
@@ -47,6 +51,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("{userId}")]
+    [Authorize(Roles = "Admin,Traveler,TravelAgent,CorporateTravelManager")]
     public async Task<IActionResult> GetUserById(long userId)
     {
         if (userId <= 0)
@@ -62,6 +67,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPut("{userId}")]
+    [Authorize(Roles = "Admin,Traveler,TravelAgent,CorporateTravelManager")]
     public async Task<IActionResult> UpdateUser(long userId, [FromBody] UserRequestDto userDto)
     {
         if (userId <= 0 || userDto == null)
@@ -77,6 +83,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpDelete("{userId}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteUser(long userId)
     {
         if (userId <= 0)
@@ -92,6 +99,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPut("{userId}/roles")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> AssignUserRole(long userId, [FromBody] UserRoleAssignmentDto roleDto)
     {
         if (userId <= 0 || roleDto == null)

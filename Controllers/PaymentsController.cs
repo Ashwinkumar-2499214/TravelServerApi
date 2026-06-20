@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TravelEaseServer.Constant;
 using TravelEaseServer.Dto;
@@ -7,6 +8,7 @@ namespace TravelEaseServer.Controllers
 {
     [ApiController]
     [Route("api/v1/[controller]")]
+    [Authorize]
     public class PaymentsController : ControllerBase
     {
         private readonly IPaymentService _paymentService;
@@ -17,6 +19,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Admin,FinanceOfficer,CorporateTravelManager")]
         public async Task<IActionResult> GetAllPayments([FromQuery] PaymentSearchDto searchDto)
         {
             return ModelState.IsValid && searchDto != null
@@ -25,6 +28,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpGet("/api/v1/invoices/{invoiceId}/payments")]
+        [Authorize(Roles = "Admin,Traveler,TravelAgent,CorporateTravelManager,FinanceOfficer")]
         public async Task<IActionResult> GetInvoicePayments(long invoiceId)
         {
             var payments = await _paymentService.GetInvoicePaymentsAsync(invoiceId);
@@ -32,6 +36,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpPost("/api/v1/invoices/{invoiceId}/payments")]
+        [Authorize(Roles = "Admin,Traveler,TravelAgent,CorporateTravelManager")]
         public async Task<IActionResult> CreatePayment(long invoiceId, [FromBody] PaymentRequestDto paymentDto)
         {
             if (!ModelState.IsValid || paymentDto == null)
@@ -43,9 +48,8 @@ namespace TravelEaseServer.Controllers
             return Ok(new { message = PaymentConstants.PaymentCreatedSuccess, data });
         }
 
-
-
         [HttpGet("{paymentId}")]
+        [Authorize(Roles = "Admin,Traveler,TravelAgent,CorporateTravelManager,FinanceOfficer")]
         public async Task<IActionResult> GetPaymentById(long paymentId)
         {
             var payment = await _paymentService.GetPaymentByIdAsync(paymentId);
@@ -53,6 +57,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpPatch("{paymentId}/status")]
+        [Authorize(Roles = "Admin,FinanceOfficer")]
         public async Task<IActionResult> UpdatePaymentStatus(long paymentId, [FromBody] PaymentStatusUpdateDto statusDto)
         {
             return ModelState.IsValid && statusDto != null
@@ -61,6 +66,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpPost("{paymentId}/refund")]
+        [Authorize(Roles = "Admin,FinanceOfficer")]
         public async Task<IActionResult> ProcessRefund(long paymentId, [FromBody] PaymentRefundDto refundDto)
         {
             return ModelState.IsValid && refundDto != null

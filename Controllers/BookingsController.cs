@@ -8,6 +8,7 @@ namespace TravelEaseServer.Controllers;
 
 [ApiController]
 [Route("api/v1/[controller]")]
+[Authorize]
 public class BookingsController : ControllerBase
 {
     private readonly IBookingService _bookingService;
@@ -18,6 +19,7 @@ public class BookingsController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager,Traveler")]
     public async Task<IActionResult> GetAllBookings([FromQuery] BookingSearchDto searchDto)
     {
         if (!ModelState.IsValid || searchDto == null)
@@ -33,6 +35,7 @@ public class BookingsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager,Traveler")]
     public async Task<IActionResult> CreateBooking([FromBody] BookingRequestDto bookingDto)
     {
         if (!ModelState.IsValid || bookingDto == null || bookingDto.UserId <= 0 || bookingDto.PartnerId <= 0 || bookingDto.InventoryId <= 0 || bookingDto.Amount <= 0)
@@ -48,6 +51,7 @@ public class BookingsController : ControllerBase
     }
 
     [HttpGet("{bookingId}")]
+    [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager,Traveler")]
     public async Task<IActionResult> GetBookingById(long bookingId)
     {
         if (bookingId <= 0)
@@ -63,6 +67,7 @@ public class BookingsController : ControllerBase
     }
 
     [HttpPut("{bookingId}")]
+    [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager")]
     public async Task<IActionResult> UpdateBooking(long bookingId, [FromBody] BookingRequestDto bookingDto)
     {
         if (bookingId <= 0 || !ModelState.IsValid || bookingDto == null || bookingDto.UserId <= 0 || bookingDto.PartnerId <= 0 || bookingDto.InventoryId <= 0 || bookingDto.Amount <= 0)
@@ -78,6 +83,7 @@ public class BookingsController : ControllerBase
     }
 
     [HttpDelete("{bookingId}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteBooking(long bookingId)
     {
         if (bookingId <= 0)
@@ -93,6 +99,7 @@ public class BookingsController : ControllerBase
     }
 
     [HttpPatch("{bookingId}/status")]
+    [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager,ComplianceOfficer")]
     public async Task<IActionResult> UpdateBookingStatus(long bookingId, [FromBody] BookingStatusUpdateDto statusDto)
     {
         if (bookingId <= 0 || !ModelState.IsValid || statusDto == null || statusDto.NewStatus < 0)

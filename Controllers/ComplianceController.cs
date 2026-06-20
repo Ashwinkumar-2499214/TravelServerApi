@@ -8,7 +8,6 @@ namespace TravelEaseServer.Controllers
 {
     [ApiController]
     [Route("api/v1/compliance")]
-    [Authorize(Roles = "ComplianceOfficer")]
     public class ComplianceController : ControllerBase
     {
         private readonly IComplianceService _complianceService;
@@ -19,6 +18,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpGet("reports")]
+        [Authorize(Roles = "ComplianceOfficer,Admin")]
         public async Task<IActionResult> GetAllReports([FromQuery] ComplianceReportSearchDto searchDto)
         {
             if (!ModelState.IsValid || searchDto == null)
@@ -31,6 +31,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpPost("reports")]
+        [Authorize(Roles = "ComplianceOfficer,Admin")]
         public async Task<IActionResult> CreateReport([FromBody] ComplianceReportRequestDto reportDto)
         {
             if (!ModelState.IsValid || reportDto == null)
@@ -43,6 +44,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpGet("reports/{reportId}")]
+        [Authorize(Roles = "ComplianceOfficer,Admin")]
         public async Task<IActionResult> GetReportById(long reportId)
         {
             if (reportId <= 0)
@@ -51,15 +53,14 @@ namespace TravelEaseServer.Controllers
             }
 
             var report = await _complianceService.GetReportByIdAsync(reportId);
-            if (report == null)
-            {
-                return NotFound(new { message = ComplianceConstants.ReportNotFound });
-            }
-
-            return Ok(new { message = GeneralConstants.OperationSuccess, data = report });
+            
+            return report != null 
+                ? Ok(new { message = GeneralConstants.OperationSuccess, data = report }) 
+                : NotFound(new { message = ComplianceConstants.ReportNotFound });
         }
 
         [HttpDelete("reports/{reportId}")]
+        [Authorize(Roles = "ComplianceOfficer,Admin")]
         public async Task<IActionResult> DeleteReport(long reportId)
         {
             if (reportId <= 0)
@@ -68,16 +69,14 @@ namespace TravelEaseServer.Controllers
             }
 
             var isDeleted = await _complianceService.DeleteReportAsync(reportId);
-            if (!isDeleted)
-            {
-                return NotFound(new { message = ComplianceConstants.ReportNotFound });
-            }
-
-            return Ok(new { message = ComplianceConstants.ReportDeletedSuccess });
+            
+            return isDeleted 
+                ? Ok(new { message = ComplianceConstants.ReportDeletedSuccess }) 
+                : NotFound(new { message = ComplianceConstants.ReportNotFound });
         }
 
         [HttpGet("audit-logs")]
-        // Audit logs are strictly for system admins and compliance verification officers
+        [Authorize(Roles = "ComplianceOfficer,Admin")]
         public async Task<IActionResult> GetAuditLogs([FromQuery] AuditLogSearchDto searchDto)
         {
             if (!ModelState.IsValid || searchDto == null)
@@ -90,7 +89,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpGet("policies")]
-        // Viewing retention policy structures can be useful to financial advisors as well
+        [Authorize(Roles = "ComplianceOfficer,Admin,FinanceOfficer")] 
         public async Task<IActionResult> GetAllPolicies()
         {
             var policies = await _complianceService.GetAllRetentionPoliciesAsync();
@@ -98,7 +97,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpPut("policies/{policyId}")]
-        // Mutating operational system configuration rules remains restricted to Admin/Compliance ONLY
+        [Authorize(Roles = "ComplianceOfficer,Admin")]
         public async Task<IActionResult> UpdatePolicy(long policyId, [FromBody] RetentionPolicyDto policyDto)
         {
             if (!ModelState.IsValid || policyDto == null || policyId <= 0)
@@ -107,12 +106,10 @@ namespace TravelEaseServer.Controllers
             }
 
             var updatedPolicy = await _complianceService.UpdateRetentionPolicyAsync(policyId, policyDto);
-            if (updatedPolicy == null)
-            {
-                return NotFound(new { message = GeneralConstants.InvalidInput });
-            }
-
-            return Ok(new { message = ComplianceConstants.PolicyUpdateSuccess, data = updatedPolicy });
+            
+            return updatedPolicy != null 
+                ? Ok(new { message = ComplianceConstants.PolicyUpdateSuccess, data = updatedPolicy }) 
+                : NotFound(new { message = GeneralConstants.InvalidInput });
         }
     }
 }

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TravelEaseServer.Constant;
 using TravelEaseServer.Dto;
@@ -7,6 +8,7 @@ namespace TravelEaseServer.Controllers;
 
 [ApiController]
 [Route("api/v1/[controller]")]
+[Authorize]
 public class InvoicesController : ControllerBase
 {
     private readonly IInvoiceService _invoiceService;
@@ -17,6 +19,7 @@ public class InvoicesController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = "Admin,FinanceOfficer,CorporateTravelManager")]
     public async Task<IActionResult> GetAllInvoices([FromQuery] InvoiceSearchDto searchDto)
     {
         if (!ModelState.IsValid || searchDto == null)
@@ -32,6 +35,7 @@ public class InvoicesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin,FinanceOfficer")]
     public async Task<IActionResult> CreateInvoice([FromBody] InvoiceRequestDto invoiceDto)
     {
         if (!ModelState.IsValid || invoiceDto == null)
@@ -47,6 +51,7 @@ public class InvoicesController : ControllerBase
     }
 
     [HttpGet("{invoiceId}")]
+    [Authorize(Roles = "Admin,FinanceOfficer,CorporateTravelManager,Traveler")]
     public async Task<IActionResult> GetInvoiceById(long invoiceId)
     {
         if (invoiceId <= 0)
@@ -62,6 +67,7 @@ public class InvoicesController : ControllerBase
     }
 
     [HttpPut("{invoiceId}")]
+    [Authorize(Roles = "Admin,FinanceOfficer")]
     public async Task<IActionResult> UpdateInvoice(long invoiceId, [FromBody] InvoiceRequestDto invoiceDto)
     {
         if (invoiceId <= 0 || !ModelState.IsValid || invoiceDto == null)
@@ -77,6 +83,7 @@ public class InvoicesController : ControllerBase
     }
 
     [HttpDelete("{invoiceId}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteInvoice(long invoiceId)
     {
         if (invoiceId <= 0)
@@ -92,6 +99,7 @@ public class InvoicesController : ControllerBase
     }
 
     [HttpPatch("{invoiceId}/status")]
+    [Authorize(Roles = "Admin,FinanceOfficer,CorporateTravelManager")]
     public async Task<IActionResult> UpdateInvoiceStatus(long invoiceId, [FromBody] InvoiceStatusUpdateDto statusDto)
     {
         if (invoiceId <= 0 || !ModelState.IsValid || statusDto == null)

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TravelEaseServer.Constant;
 using TravelEaseServer.Dto;
@@ -8,6 +9,7 @@ namespace TravelEaseServer.Controllers;
 [ApiController]
 [Route("api/v1/[controller]")]
 [Produces("application/json")]
+[Authorize]
 public class PartnersController : ControllerBase
 {
     private readonly IPartnerService _partnerService;
@@ -18,6 +20,7 @@ public class PartnersController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager")]
     public async Task<IActionResult> GetAllPartners([FromQuery] PartnerSearchDto searchDto)
     {
         if (searchDto == null)
@@ -33,6 +36,7 @@ public class PartnersController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> CreatePartner([FromBody] PartnerRequestDto partnerDto)
     {
         if (partnerDto == null)
@@ -48,6 +52,7 @@ public class PartnersController : ControllerBase
     }
 
     [HttpGet("{partnerId}")]
+    [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager")]
     public async Task<IActionResult> GetPartnerById(long partnerId)
     {
         if (partnerId <= 0)
@@ -63,6 +68,7 @@ public class PartnersController : ControllerBase
     }
 
     [HttpPut("{partnerId}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdatePartner(long partnerId, [FromBody] PartnerRequestDto partnerDto)
     {
         if (partnerId <= 0 || partnerDto == null)
@@ -78,6 +84,7 @@ public class PartnersController : ControllerBase
     }
 
     [HttpDelete("{partnerId}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeletePartner(long partnerId)
     {
         if (partnerId <= 0)
@@ -93,6 +100,7 @@ public class PartnersController : ControllerBase
     }
 
     [HttpPatch("{partnerId}/status")]
+    [Authorize(Roles = "Admin,ComplianceOfficer")]
     public async Task<IActionResult> UpdatePartnerStatus(long partnerId, [FromBody] PartnerStatusUpdateDto statusDto)
     {
         if (partnerId <= 0 || statusDto == null)

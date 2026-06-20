@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-
 using TravelEaseServer.Constant;
 using TravelEaseServer.Dto;
 using TravelEaseServer.Service.Interface;
@@ -9,7 +8,7 @@ namespace TravelEaseServer.Controllers
 {
     [ApiController]
     [Route("api/v1/[controller]")]
-    [Authorize(Roles = "ComplianceOfficer")]
+    [Authorize]
     public class NotificationsController : ControllerBase
     {
         private readonly INotificationService _notificationService;
@@ -20,6 +19,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpGet("~/api/v1/users/{userId}/notifications")]
+        [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager,Traveler")]
         public async Task<IActionResult> GetUserNotifications([FromRoute] long userId)
         {
             var notifications = await _notificationService.GetUserNotificationsAsync(userId);
@@ -27,6 +27,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager,ComplianceOfficer")]
         public async Task<IActionResult> CreateNotification([FromBody] NotificationRequestDto notificationDto)
         {
             if (notificationDto == null || notificationDto.UserId <= 0 || string.IsNullOrWhiteSpace(notificationDto.Message))
@@ -39,6 +40,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpGet("{notificationId:long}")]
+        [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager,Traveler")]
         public async Task<IActionResult> GetNotificationById([FromRoute] long notificationId)
         {
             var notification = await _notificationService.GetNotificationByIdAsync(notificationId);
@@ -46,6 +48,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpDelete("{notificationId:long}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteNotification([FromRoute] long notificationId)
         {
             var isDeleted = await _notificationService.DeleteNotificationAsync(notificationId);
@@ -58,6 +61,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpPatch("{notificationId:long}/read")]
+        [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager,Traveler")]
         public async Task<IActionResult> MarkAsRead([FromRoute] long notificationId)
         {
             var result = await _notificationService.MarkAsReadAsync(notificationId);
@@ -70,6 +74,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpPatch("~/api/v1/users/{userId}/notifications/read-all")]
+        [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager,Traveler")]
         public async Task<IActionResult> MarkAllAsRead([FromRoute] long userId)
         {
             var isSuccess = await _notificationService.MarkAllAsReadAsync(userId);
