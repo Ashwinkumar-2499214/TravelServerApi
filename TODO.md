@@ -1,7 +1,0 @@
-- [x] Update Model/User.cs Role type decision: **will change DB to string**
-- [ ] Update Model/User.cs: change Role type to string
-- [ ] Update UserService/AuthenticationService/Create/Update/AssignRole to store Role string
-- [ ] Ensure enum parsing/validation from incoming int role
-- [ ] Create migration to alter Users.Role column type (and data conversion)
-- [ ] Run `dotnet test`
-- [ ] Run `dotnet ef database update`

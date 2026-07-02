@@ -1,7 +1,10 @@
+using System.Text.Json.Serialization;
+
 namespace TravelEaseServer.Dto
 {
     public class InventoryRequestDto
     {
+        [JsonIgnore]
         public long PartnerId { get; set; }
         public string ItemType { get; set; }
         public string Description { get; set; }
@@ -35,7 +38,6 @@ namespace TravelEaseServer.Dto
         public long InventoryId { get; set; }
         [System.Text.Json.Serialization.JsonPropertyName("availability")]
         public int NewAvailability { get; set; }
-        // Status can be omitted by the caller; when null the controller will use the current inventory status
         public int? Status { get; set; }
     }
 }

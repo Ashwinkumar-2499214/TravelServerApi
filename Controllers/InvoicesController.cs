@@ -19,7 +19,7 @@ public class InvoicesController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = "Admin,FinanceOfficer,CorporateTravelManager")]
+    [Authorize(Roles = "Admin,FinanceOfficer,CorporateTravelManager,Traveler")]
     public async Task<IActionResult> GetAllInvoices([FromQuery] InvoiceSearchDto searchDto)
     {
         if (!ModelState.IsValid || searchDto == null)

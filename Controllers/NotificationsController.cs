@@ -27,7 +27,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager,ComplianceOfficer")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateNotification([FromBody] NotificationRequestDto notificationDto)
         {
             if (notificationDto == null || notificationDto.UserId <= 0 || string.IsNullOrWhiteSpace(notificationDto.Message))

@@ -23,7 +23,7 @@ namespace TravelEaseServer.Repository.Implementation
 
         public async Task<UserResponseDto?> GetUserByIdAsync(long userId)
         {
-            var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == userId);
+            var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == userId && u.IsActive);
             return user != null ? MapUserToDto(user) : null;
         }
 
@@ -42,6 +42,9 @@ namespace TravelEaseServer.Repository.Implementation
 
             if (searchDto.IsActive.HasValue)
                 query = query.Where(u => u.IsActive == searchDto.IsActive.Value);
+            else
+                query = query.Where(u => u.IsActive);
+
 
             int skip = (searchDto.PageNumber - 1) * searchDto.PageSize;
 

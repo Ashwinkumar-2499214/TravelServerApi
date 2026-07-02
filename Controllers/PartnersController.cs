@@ -36,7 +36,7 @@ public class PartnersController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager")]
     public async Task<IActionResult> CreatePartner([FromBody] PartnerRequestDto partnerDto)
     {
         if (partnerDto == null)

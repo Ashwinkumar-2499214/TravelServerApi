@@ -22,7 +22,7 @@ namespace TravelEaseServer.Dto
 
     public class UserSearchDto
     {
-        public required string SearchTerm { get; set; }
+        public string? SearchTerm { get; set; }
         public int? Role { get; set; }
         public bool? IsActive { get; set; }
         public int PageNumber { get; set; } = 1;

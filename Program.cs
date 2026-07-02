@@ -1,15 +1,42 @@
-
 using Microsoft.EntityFrameworkCore;
 using TravelEaseServer.Repository.Implementation;
 using TravelEaseServer.Repository.Interface;
 using TravelEaseServer.Service.Implementation;
 using TravelEaseServer.Service.Interface;
 
-
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
+
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer((document, context, cancellationToken) =>
+    {
+        document.Components ??= new Microsoft.OpenApi.OpenApiComponents();
+        document.Components.SecuritySchemes ??= new Dictionary<string, Microsoft.OpenApi.IOpenApiSecurityScheme>();
+        
+        document.Security ??= new List<Microsoft.OpenApi.OpenApiSecurityRequirement>();
+
+        document.Components.SecuritySchemes.Add("Bearer", new Microsoft.OpenApi.OpenApiSecurityScheme
+        {
+            Type = Microsoft.OpenApi.SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            Description = "JWT Authorization header using the Bearer scheme."
+        });
+
+        document.Security.Add(new Microsoft.OpenApi.OpenApiSecurityRequirement
+        {
+            [new Microsoft.OpenApi.OpenApiSecuritySchemeReference("Bearer", document)] = new List<string>()
+        });
+        
+        return Task.CompletedTask;
+    });
+});
 
 builder.Services.AddAuthentication(options =>
 {
@@ -46,7 +73,6 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             errorNumbersToAdd: null)
     ));
 
-
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IPartnerRepository, PartnerRepository>();
 builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
@@ -75,19 +101,14 @@ builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", builder =>
+    options.AddPolicy("AllowViteFrontend", policyBuilder =>
     {
-        builder.AllowAnyOrigin()
-               .AllowAnyMethod()
-               .AllowAnyHeader();
+        policyBuilder.WithOrigins("http://localhost:5173") 
+                     .AllowAnyMethod()
+                     .AllowAnyHeader()
+                     .AllowCredentials(); 
     });
 });
-
-builder.Services.AddControllers()
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
-    });
 
 builder.Services.AddHttpContextAccessor();
 
@@ -96,10 +117,14 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "TravelEase API v1");
+    });
 }
 
 app.UseHttpsRedirection();
-app.UseCors("AllowAll");
+app.UseCors("AllowViteFrontend");
 
 app.UseExceptionHandler(opt => opt.Run(TravelEaseServer.Middleware.GlobalExceptionHandler.HandleAsync));
 app.UseAuthentication();
@@ -107,4 +132,3 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
-

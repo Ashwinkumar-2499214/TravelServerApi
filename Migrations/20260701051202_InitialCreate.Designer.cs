@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace TravelEaseServer.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260620104233_InitialCreate")]
+    [Migration("20260701051202_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
