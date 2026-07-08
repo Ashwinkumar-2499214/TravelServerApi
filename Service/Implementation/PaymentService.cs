@@ -22,11 +22,18 @@ namespace TravelEaseServer.Service.Implementation
                 var payment = new Payment
                 {
                     InvoiceId = paymentDto.InvoiceId,
+                    BookingId = paymentDto.BookingId,
                     Amount = paymentDto.Amount,
+                    Currency = paymentDto.Currency ?? "INR",
                     PaymentDate = DateTime.UtcNow,
                     Method = paymentDto.Method,
                     Status = (int)Enum.PaymentStatus.Processing,
                     TransactionReference = paymentDto.TransactionReference,
+                    GatewayProvider = paymentDto.GatewayProvider,
+                    BillingName = paymentDto.BillingName,
+                    BillingEmail = paymentDto.BillingEmail,
+                    BillingPhone = paymentDto.BillingPhone,
+                    Notes = paymentDto.Notes,
                     CreatedDate = DateTime.UtcNow
                 };
 

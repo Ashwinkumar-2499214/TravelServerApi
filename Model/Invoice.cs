@@ -7,6 +7,10 @@ namespace TravelEaseServer.Model
         [Key]
         public long InvoiceId { get; set; }
         public long BookingId { get; set; }
+        public string InvoiceNumber { get; set; }
+        public decimal BaseAmount { get; set; }
+        public decimal TaxAmount { get; set; }
+        public decimal DiscountAmount { get; set; }
         public decimal Amount { get; set; }
         public DateTime InvoiceDate { get; set; }
         public DateTime DueDate { get; set; }

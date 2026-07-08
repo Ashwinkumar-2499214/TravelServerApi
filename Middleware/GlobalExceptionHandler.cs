@@ -28,6 +28,7 @@ namespace TravelEaseServer.Middleware
                 KeyNotFoundException => (int)HttpStatusCode.NotFound,
                 UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized,
                 ArgumentException => (int)HttpStatusCode.BadRequest,
+                InvalidOperationException => (int)HttpStatusCode.Conflict,
                 _ => (int)HttpStatusCode.InternalServerError
             };
 
@@ -36,6 +37,7 @@ namespace TravelEaseServer.Middleware
                 (int)HttpStatusCode.NotFound => Constant.GeneralConstants.ResourceNotFound,
                 (int)HttpStatusCode.Unauthorized => Constant.GeneralConstants.OperationFailed,
                 (int)HttpStatusCode.BadRequest => Constant.GeneralConstants.InvalidInput,
+                (int)HttpStatusCode.Conflict => exception.Message,
                 _ => Constant.GeneralConstants.InternalServerError
             };
 

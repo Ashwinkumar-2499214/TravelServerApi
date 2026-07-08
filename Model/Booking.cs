@@ -12,6 +12,15 @@ namespace TravelEaseServer.Model
         public long PartnerId { get; set; }
         public long InventoryId { get; set; }
         public string ItemType { get; set; }
+
+        // Hotel booking fields
+        public DateTime CheckInDate { get; set; }
+        public DateTime CheckOutDate { get; set; }
+        public int NumberOfGuests { get; set; }
+        public int NumberOfRooms { get; set; }
+        public string RoomType { get; set; }
+        public string SpecialRequests { get; set; }
+
         public DateTime BookingDate { get; set; }
         public int Status { get; set; }
         public decimal Amount { get; set; }

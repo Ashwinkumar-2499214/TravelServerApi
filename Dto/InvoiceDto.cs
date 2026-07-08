@@ -4,6 +4,9 @@ namespace TravelEaseServer.Dto
     {
         public long BookingId { get; set; }
         public decimal Amount { get; set; }
+        public decimal BaseAmount { get; set; }
+        public decimal TaxAmount { get; set; }
+        public decimal DiscountAmount { get; set; }
         public DateTime DueDate { get; set; }
         public string Description { get; set; }
     }
@@ -11,10 +14,20 @@ namespace TravelEaseServer.Dto
     public class InvoiceResponseDto
     {
         public long InvoiceId { get; set; }
+        public string InvoiceNumber { get; set; }
         public long BookingId { get; set; }
         public long UserId { get; set; }
-        public string InventoryName { get; set; }
         public string UserName { get; set; }
+        public string UserEmail { get; set; }
+        public string HotelName { get; set; }
+        public string RoomType { get; set; }
+        public DateTime CheckInDate { get; set; }
+        public DateTime CheckOutDate { get; set; }
+        public int NumberOfNights { get; set; }
+        public string InventoryName { get; set; }
+        public decimal BaseAmount { get; set; }
+        public decimal TaxAmount { get; set; }
+        public decimal DiscountAmount { get; set; }
         public decimal Amount { get; set; }
         public DateTime InvoiceDate { get; set; }
         public DateTime DueDate { get; set; }

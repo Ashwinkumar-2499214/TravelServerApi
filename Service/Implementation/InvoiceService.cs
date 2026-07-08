@@ -15,74 +15,61 @@ namespace TravelEaseServer.Service.Implementation
             _invoiceRepository = invoiceRepository;
         }
 
-        public async Task<InvoiceResponseDto> CreateInvoiceAsync(InvoiceRequestDto invoiceDto)
+        public async Task<InvoiceResponseDto> CreateInvoiceAsync(InvoiceRequestDto dto)
         {
-            try
+            decimal baseAmount = dto.BaseAmount > 0 ? dto.BaseAmount : dto.Amount;
+            decimal tax = dto.TaxAmount;
+            decimal discount = dto.DiscountAmount;
+            decimal total = baseAmount + tax - discount;
+
+            var invoice = new Invoice
             {
-                var invoice = new Invoice
-                {
-                    BookingId = invoiceDto.BookingId,
-                    Amount = invoiceDto.Amount,
-                    InvoiceDate = DateTime.UtcNow,
-                    DueDate = invoiceDto.DueDate,
-                    Status = (int)Enum.InvoiceStatus.Issued,
-                    Description = invoiceDto.Description,
-                    CreatedDate = DateTime.UtcNow
-                };
+                BookingId = dto.BookingId,
+                InvoiceNumber = $"INV-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..6].ToUpper()}",
+                BaseAmount = baseAmount,
+                TaxAmount = tax,
+                DiscountAmount = discount,
+                Amount = total > 0 ? total : dto.Amount,
+                InvoiceDate = DateTime.UtcNow,
+                DueDate = dto.DueDate == default ? DateTime.UtcNow.AddDays(7) : dto.DueDate,
+                Status = (int)Enum.InvoiceStatus.Issued,
+                Description = dto.Description ?? "Hotel Booking Invoice",
+                CreatedDate = DateTime.UtcNow
+            };
 
-                return await _invoiceRepository.CreateInvoiceAsync(invoice);
-            }
-            catch (Exception ex)
+            return await _invoiceRepository.CreateInvoiceAsync(invoice);
+        }
+
+        public async Task<InvoiceResponseDto> GetInvoiceByIdAsync(long invoiceId) =>
+            await _invoiceRepository.GetInvoiceByIdAsync(invoiceId);
+
+        public async Task<IEnumerable<InvoiceResponseDto>> GetAllInvoicesAsync(InvoiceSearchDto searchDto) =>
+            await _invoiceRepository.GetAllInvoicesAsync(searchDto);
+
+        public async Task<IEnumerable<InvoiceResponseDto>> GetBookingInvoicesAsync(long bookingId) =>
+            await _invoiceRepository.GetInvoicesByBookingIdAsync(bookingId);
+
+        public async Task<InvoiceResponseDto> UpdateInvoiceAsync(long invoiceId, InvoiceRequestDto dto)
+        {
+            var invoice = new Invoice
             {
-                throw new InvalidOperationException(InvoiceConstants.InvoiceCreatedSuccess, ex);
-            }
+                InvoiceId = invoiceId,
+                BookingId = dto.BookingId,
+                BaseAmount = dto.BaseAmount,
+                TaxAmount = dto.TaxAmount,
+                DiscountAmount = dto.DiscountAmount,
+                Amount = dto.Amount,
+                DueDate = dto.DueDate,
+                Description = dto.Description,
+                ModifiedDate = DateTime.UtcNow
+            };
+            return await _invoiceRepository.UpdateInvoiceAsync(invoice);
         }
 
-        public async Task<InvoiceResponseDto> GetInvoiceByIdAsync(long invoiceId)
-        {
-            return await _invoiceRepository.GetInvoiceByIdAsync(invoiceId);
-        }
+        public async Task<bool> DeleteInvoiceAsync(long invoiceId) =>
+            await _invoiceRepository.DeleteInvoiceAsync(invoiceId);
 
-        public async Task<IEnumerable<InvoiceResponseDto>> GetAllInvoicesAsync(InvoiceSearchDto searchDto)
-        {
-            return await _invoiceRepository.GetAllInvoicesAsync(searchDto);
-        }
-
-        public async Task<IEnumerable<InvoiceResponseDto>> GetBookingInvoicesAsync(long bookingId)
-        {
-            return await _invoiceRepository.GetInvoicesByBookingIdAsync(bookingId);
-        }
-
-        public async Task<InvoiceResponseDto> UpdateInvoiceAsync(long invoiceId, InvoiceRequestDto invoiceDto)
-        {
-            try
-            {
-                var invoice = new Invoice
-                {
-                    InvoiceId = invoiceId,
-                    BookingId = invoiceDto.BookingId,
-                    Amount = invoiceDto.Amount,
-                    DueDate = invoiceDto.DueDate,
-                    Description = invoiceDto.Description,
-                    ModifiedDate = DateTime.UtcNow
-                };
-
-                return await _invoiceRepository.UpdateInvoiceAsync(invoice);
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException(InvoiceConstants.InvoiceUpdateSuccess, ex);
-            }
-        }
-
-        public async Task<bool> DeleteInvoiceAsync(long invoiceId)
-        {
-            return await _invoiceRepository.DeleteInvoiceAsync(invoiceId);
-        }
-
-        public async Task<InvoiceResponseDto> UpdateInvoiceStatusAsync(long invoiceId, int newStatus)
-        {
-            return await _invoiceRepository.UpdateInvoiceStatusAsync(invoiceId, newStatus);
-        }
+        public async Task<InvoiceResponseDto> UpdateInvoiceStatusAsync(long invoiceId, int newStatus) =>
+            await _invoiceRepository.UpdateInvoiceStatusAsync(invoiceId, newStatus);
     }
 }

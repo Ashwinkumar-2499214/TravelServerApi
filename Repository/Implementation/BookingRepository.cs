@@ -21,188 +21,161 @@ namespace TravelEaseServer.Repository.Implementation
                 _context.Bookings.Add(booking);
                 await _context.SaveChangesAsync();
                 await _context.Entry(booking).Reference(b => b.User).LoadAsync();
-                return MapBookingToDto(booking);
+                await _context.Entry(booking).Reference(b => b.Partner).LoadAsync();
+                await _context.Entry(booking).Reference(b => b.Inventory).LoadAsync();
+                return MapToDto(booking);
             }
             catch (DbUpdateException ex)
             {
-                var sqlErrorMessage = ex.InnerException?.Message ?? ex.Message;
-                throw new InvalidOperationException($"Database Rejected: {sqlErrorMessage}", ex);
+                throw new InvalidOperationException($"Database error: {ex.InnerException?.Message ?? ex.Message}", ex);
             }
         }
 
         public async Task<BookingResponseDto> GetBookingByIdAsync(long bookingId)
         {
-            try
-            {
-                var booking = await _context.Bookings
-                    .AsNoTracking()
-                    .Include(b => b.User)
-                    .FirstOrDefaultAsync(b => b.BookingId == bookingId);
+            var booking = await _context.Bookings
+                .AsNoTracking()
+                .Include(b => b.User)
+                .Include(b => b.Partner)
+                .Include(b => b.Inventory)
+                .FirstOrDefaultAsync(b => b.BookingId == bookingId);
 
-                return booking != null ? MapBookingToDto(booking) : null;
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Error retrieving booking with ID {bookingId}.", ex);
-            }
+            return booking != null ? MapToDto(booking) : null;
         }
 
         public async Task<IEnumerable<BookingResponseDto>> GetAllBookingsAsync(BookingSearchDto searchDto)
         {
-            try
-            {
-                var query = _context.Bookings.AsNoTracking().Include(b => b.User).AsQueryable();
+            var query = _context.Bookings
+                .AsNoTracking()
+                .Include(b => b.User)
+                .Include(b => b.Partner)
+                .Include(b => b.Inventory)
+                .AsQueryable();
 
-                // Apply filters
-                if (searchDto.UserId.HasValue)
-                {
-                    query = query.Where(b => b.UserId == searchDto.UserId.Value);
-                }
+            if (searchDto.UserId.HasValue)
+                query = query.Where(b => b.UserId == searchDto.UserId.Value);
+            if (searchDto.PartnerId.HasValue)
+                query = query.Where(b => b.PartnerId == searchDto.PartnerId.Value);
+            if (searchDto.Status.HasValue)
+                query = query.Where(b => b.Status == searchDto.Status.Value);
+            if (searchDto.FromDate.HasValue)
+                query = query.Where(b => b.CheckInDate >= searchDto.FromDate.Value);
+            if (searchDto.ToDate.HasValue)
+                query = query.Where(b => b.CheckOutDate <= searchDto.ToDate.Value);
 
-                if (searchDto.PartnerId.HasValue)
-                {
-                    query = query.Where(b => b.PartnerId == searchDto.PartnerId.Value);
-                }
+            int skip = (searchDto.PageNumber - 1) * searchDto.PageSize;
+            var bookings = await query
+                .OrderByDescending(b => b.CreatedDate)
+                .Skip(skip)
+                .Take(searchDto.PageSize)
+                .ToListAsync();
 
-                if (searchDto.Status.HasValue)
-                {
-                    query = query.Where(b => b.Status == searchDto.Status.Value);
-                }
-
-                if (searchDto.FromDate.HasValue)
-                {
-                    query = query.Where(b => b.BookingDate >= searchDto.FromDate.Value);
-                }
-
-                if (searchDto.ToDate.HasValue)
-                {
-                    query = query.Where(b => b.BookingDate <= searchDto.ToDate.Value);
-                }
-
-                // Apply pagination
-                int skip = (searchDto.PageNumber - 1) * searchDto.PageSize;
-                var bookings = await query
-                    .OrderByDescending(b => b.BookingDate)
-                    .Skip(skip)
-                    .Take(searchDto.PageSize)
-                    .ToListAsync();
-
-                return bookings.Select(MapBookingToDto);
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException("Error retrieving bookings.", ex);
-            }
+            return bookings.Select(MapToDto);
         }
 
         public async Task<IEnumerable<BookingResponseDto>> GetBookingsByUserIdAsync(long userId)
         {
-            try
-            {
-                var bookings = await _context.Bookings
-                    .AsNoTracking()
-                    .Include(b => b.User)
-                    .Where(b => b.UserId == userId)
-                    .OrderByDescending(b => b.BookingDate)
-                    .ToListAsync();
+            var bookings = await _context.Bookings
+                .AsNoTracking()
+                .Include(b => b.User)
+                .Include(b => b.Partner)
+                .Include(b => b.Inventory)
+                .Where(b => b.UserId == userId)
+                .OrderByDescending(b => b.CreatedDate)
+                .ToListAsync();
 
-                return bookings.Select(MapBookingToDto);
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Error retrieving bookings for user with ID {userId}.", ex);
-            }
+            return bookings.Select(MapToDto);
+        }
+
+        public async Task<bool> HasDuplicateBookingAsync(long userId, long inventoryId, string roomType, DateTime checkIn, DateTime checkOut, long? excludeBookingId = null)
+        {
+            var query = _context.Bookings
+                .Where(b => b.UserId == userId
+                    && b.InventoryId == inventoryId
+                    && b.RoomType == roomType
+                    && b.Status != (int)Enum.BookingStatus.Cancelled
+                    && b.CheckInDate < checkOut
+                    && b.CheckOutDate > checkIn);
+
+            if (excludeBookingId.HasValue)
+                query = query.Where(b => b.BookingId != excludeBookingId.Value);
+
+            return await query.AnyAsync();
         }
 
         public async Task<BookingResponseDto> UpdateBookingAsync(Booking booking)
         {
-            try
-            {
-                var existingBooking = await _context.Bookings
-                    .Include(b => b.User)
-                    .FirstOrDefaultAsync(b => b.BookingId == booking.BookingId);
-                if (existingBooking == null)
-                {
-                    throw new KeyNotFoundException($"Booking with ID {booking.BookingId} not found.");
-                }
+            var existing = await _context.Bookings
+                .Include(b => b.User)
+                .Include(b => b.Partner)
+                .Include(b => b.Inventory)
+                .FirstOrDefaultAsync(b => b.BookingId == booking.BookingId)
+                ?? throw new KeyNotFoundException($"Booking {booking.BookingId} not found.");
 
-                existingBooking.ItemType = booking.ItemType;
-                existingBooking.BookingDate = booking.BookingDate;
-                existingBooking.Status = booking.Status;
-                existingBooking.Amount = booking.Amount;
-                existingBooking.ModifiedDate = DateTime.UtcNow;
+            existing.ItemType = booking.ItemType;
+            existing.CheckInDate = booking.CheckInDate;
+            existing.CheckOutDate = booking.CheckOutDate;
+            existing.NumberOfGuests = booking.NumberOfGuests;
+            existing.NumberOfRooms = booking.NumberOfRooms;
+            existing.RoomType = booking.RoomType;
+            existing.SpecialRequests = booking.SpecialRequests;
+            existing.Amount = booking.Amount;
+            existing.ModifiedDate = DateTime.UtcNow;
 
-                _context.Bookings.Update(existingBooking);
-                await _context.SaveChangesAsync();
-
-                return MapBookingToDto(existingBooking);
-            }
-            catch (DbUpdateException ex)
-            {
-                throw new InvalidOperationException($"Error updating booking with ID {booking.BookingId}.", ex);
-            }
+            await _context.SaveChangesAsync();
+            return MapToDto(existing);
         }
 
         public async Task<bool> DeleteBookingAsync(long bookingId)
         {
-            try
-            {
-                var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.BookingId == bookingId);
-                if (booking == null)
-                {
-                    return false;
-                }
-
-                _context.Bookings.Remove(booking);
-                await _context.SaveChangesAsync();
-                return true;
-            }
-            catch (DbUpdateException ex)
-            {
-                throw new InvalidOperationException($"Error deleting booking with ID {bookingId}.", ex);
-            }
+            var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.BookingId == bookingId);
+            if (booking == null) return false;
+            _context.Bookings.Remove(booking);
+            await _context.SaveChangesAsync();
+            return true;
         }
 
         public async Task<BookingResponseDto> UpdateBookingStatusAsync(long bookingId, int status)
         {
-            try
-            {
-                var booking = await _context.Bookings
-                    .Include(b => b.User)
-                    .FirstOrDefaultAsync(b => b.BookingId == bookingId);
-                if (booking == null)
-                {
-                    throw new KeyNotFoundException($"Booking with ID {bookingId} not found.");
-                }
+            var booking = await _context.Bookings
+                .Include(b => b.User)
+                .Include(b => b.Partner)
+                .Include(b => b.Inventory)
+                .FirstOrDefaultAsync(b => b.BookingId == bookingId)
+                ?? throw new KeyNotFoundException($"Booking {bookingId} not found.");
 
-                booking.Status = status;
-                booking.ModifiedDate = DateTime.UtcNow;
-
-                _context.Bookings.Update(booking);
-                await _context.SaveChangesAsync();
-
-                return MapBookingToDto(booking);
-            }
-            catch (DbUpdateException ex)
-            {
-                throw new InvalidOperationException($"Error updating booking status with ID {bookingId}.", ex);
-            }
+            booking.Status = status;
+            booking.ModifiedDate = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            return MapToDto(booking);
         }
 
-        private BookingResponseDto MapBookingToDto(Booking booking)
+        private static BookingResponseDto MapToDto(Booking b)
         {
+            int nights = b.CheckOutDate > b.CheckInDate
+                ? (int)(b.CheckOutDate.Date - b.CheckInDate.Date).TotalDays
+                : 0;
+
             return new BookingResponseDto
             {
-                BookingId = booking.BookingId,
-                UserId = booking.UserId,
-                UserName = booking.User?.Name ?? string.Empty,
-                PartnerId = booking.PartnerId,
-                InventoryId = booking.InventoryId,
-                ItemType = booking.ItemType,
-                BookingDate = booking.BookingDate,
-                Status = booking.Status,
-                Amount = booking.Amount,
-                CreatedDate = booking.CreatedDate
+                BookingId = b.BookingId,
+                UserId = b.UserId,
+                UserName = b.User?.Name ?? string.Empty,
+                PartnerId = b.PartnerId,
+                HotelName = b.Partner?.Name ?? b.Inventory?.ItemType ?? string.Empty,
+                InventoryId = b.InventoryId,
+                ItemType = b.ItemType,
+                CheckInDate = b.CheckInDate,
+                CheckOutDate = b.CheckOutDate,
+                NumberOfNights = nights,
+                NumberOfGuests = b.NumberOfGuests,
+                NumberOfRooms = b.NumberOfRooms,
+                RoomType = b.RoomType,
+                SpecialRequests = b.SpecialRequests,
+                BookingDate = b.BookingDate,
+                Status = b.Status,
+                Amount = b.Amount,
+                CreatedDate = b.CreatedDate
             };
         }
     }

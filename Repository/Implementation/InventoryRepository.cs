@@ -178,7 +178,7 @@ namespace TravelEaseServer.Repository.Implementation
                     throw new KeyNotFoundException($"Inventory with ID {inventoryId} not found.");
                 }
 
-                inventory.Availability = availability > 0 ? availability : inventory.Availability;
+                inventory.Availability = availability >= 0 ? availability : inventory.Availability;
                 inventory.Status = status;
 
                 _context.Inventories.Update(inventory);

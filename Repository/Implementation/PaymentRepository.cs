@@ -195,12 +195,20 @@ namespace TravelEaseServer.Repository.Implementation
             return new PaymentResponseDto
             {
                 PaymentId = payment.PaymentId,
+                UserId = 0,
                 InvoiceId = payment.InvoiceId,
+                BookingId = payment.BookingId,
                 Amount = payment.Amount,
+                Currency = payment.Currency,
                 PaymentDate = payment.PaymentDate,
                 Method = payment.Method,
                 Status = payment.Status,
                 TransactionReference = payment.TransactionReference,
+                GatewayProvider = payment.GatewayProvider,
+                BillingName = payment.BillingName,
+                BillingEmail = payment.BillingEmail,
+                BillingPhone = payment.BillingPhone,
+                Notes = payment.Notes,
                 CreatedDate = payment.CreatedDate
             };
         }
