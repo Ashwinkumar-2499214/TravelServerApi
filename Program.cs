@@ -9,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
 
@@ -114,6 +115,9 @@ builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
+// 1. Exception handling should be first
+app.UseExceptionHandler(opt => opt.Run(TravelEaseServer.Middleware.GlobalExceptionHandler.HandleAsync));
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -123,12 +127,21 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+// 2. Https & Static Files
 app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+// 3. Explicitly add UseRouting before UseCors
+app.UseRouting();
+
+// 4. CORS must be placed AFTER UseRouting and BEFORE UseAuthentication/UseAuthorization
 app.UseCors("AllowViteFrontend");
 
-app.UseExceptionHandler(opt => opt.Run(TravelEaseServer.Middleware.GlobalExceptionHandler.HandleAsync));
+// 5. Authentication & Authorization
 app.UseAuthentication();
 app.UseAuthorization();
+
+// 6. Endpoints
 app.MapControllers();
 
 app.Run();

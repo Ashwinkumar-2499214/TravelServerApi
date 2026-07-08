@@ -13,6 +13,7 @@ namespace TravelEaseServer.Dto
     {
         public long NotificationId { get; set; }
         public long UserId { get; set; }
+        public string UserName { get; set; }
         public string Message { get; set; }
         public NotificationCategory Category { get; set; }
         public NotificationStatus Status { get; set; }

@@ -12,6 +12,9 @@ namespace TravelEaseServer.Dto
     {
         public long InvoiceId { get; set; }
         public long BookingId { get; set; }
+        public long UserId { get; set; }
+        public string InventoryName { get; set; }
+        public string UserName { get; set; }
         public decimal Amount { get; set; }
         public DateTime InvoiceDate { get; set; }
         public DateTime DueDate { get; set; }
@@ -23,6 +26,7 @@ namespace TravelEaseServer.Dto
     public class InvoiceSearchDto
     {
         public long? BookingId { get; set; }
+        public long? UserId { get; set; }
         public int? Status { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }

@@ -2,6 +2,7 @@ namespace TravelEaseServer.Dto
 {
     public class ReservationRequestDto
     {
+        public long UserId { get; set; }
         public long BookingId { get; set; }
         public required string Details { get; set; }
         public DateTime StartDate { get; set; }
@@ -11,6 +12,7 @@ namespace TravelEaseServer.Dto
     public class ReservationResponseDto
     {
         public long ReservationId { get; set; }
+        public long UserId { get; set; }
         public long BookingId { get; set; }
         public required string Details { get; set; }
         public DateTime StartDate { get; set; }

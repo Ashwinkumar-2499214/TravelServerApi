@@ -12,6 +12,7 @@ namespace TravelEaseServer.Tests
     public class AuthenticationControllerTests
     {
         private Mock<IAuthenticationService> _mockAuthService;
+        private Mock<INotificationService> _mockNotificationService;
         private AuthenticationController _controller;
 
         [SetUp]
@@ -19,7 +20,8 @@ namespace TravelEaseServer.Tests
         {
             // Initialize the mock service before each test to ensure a clean state
             _mockAuthService = new Mock<IAuthenticationService>();
-            _controller = new AuthenticationController(_mockAuthService.Object);
+            _mockNotificationService = new Mock<INotificationService>();
+            _controller = new AuthenticationController(_mockAuthService.Object, _mockNotificationService.Object);
         }
 
         #region Login Tests

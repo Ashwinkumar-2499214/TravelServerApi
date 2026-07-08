@@ -13,13 +13,14 @@ namespace TravelEaseServer.Tests.Controllers
     public class ItinerariesControllerTests
     {
         private Mock<IItineraryService> _mockItineraryService;
+        private Mock<INotificationService> _mockNotificationService;
         private ItinerariesController _controller;
- 
         [SetUp]
         public void Setup()
         {
             _mockItineraryService = new Mock<IItineraryService>();
-            _controller = new ItinerariesController(_mockItineraryService.Object);
+            _mockNotificationService = new Mock<INotificationService>();
+            _controller = new ItinerariesController(_mockItineraryService.Object, _mockNotificationService.Object);
         }
  
         #region Helper Methods

@@ -251,6 +251,29 @@ namespace TravelEaseServer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "InventoryMedia",
+                columns: table => new
+                {
+                    MediaId = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    InventoryId = table.Column<long>(type: "bigint", nullable: false),
+                    FileName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Url = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    MediaType = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    UploadedDate = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_InventoryMedia", x => x.MediaId);
+                    table.ForeignKey(
+                        name: "FK_InventoryMedia_Inventories_InventoryId",
+                        column: x => x.InventoryId,
+                        principalTable: "Inventories",
+                        principalColumn: "InventoryId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Invoices",
                 columns: table => new
                 {
@@ -385,6 +408,11 @@ namespace TravelEaseServer.Migrations
                 column: "PartnerId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_InventoryMedia_InventoryId",
+                table: "InventoryMedia",
+                column: "InventoryId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Invoices_BookingId",
                 table: "Invoices",
                 column: "BookingId");
@@ -428,6 +456,9 @@ namespace TravelEaseServer.Migrations
 
             migrationBuilder.DropTable(
                 name: "ComplianceReports");
+
+            migrationBuilder.DropTable(
+                name: "InventoryMedia");
 
             migrationBuilder.DropTable(
                 name: "ItineraryBookings");

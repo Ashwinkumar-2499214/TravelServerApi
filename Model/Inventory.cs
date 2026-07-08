@@ -17,5 +17,6 @@ namespace TravelEaseServer.Model
 
         public virtual Partner Partner { get; set; }
         public virtual ICollection<Booking> Bookings { get; set; } = new List<Booking>();
+        public virtual ICollection<InventoryMedia> Media { get; set; } = new List<InventoryMedia>();
     }
 }

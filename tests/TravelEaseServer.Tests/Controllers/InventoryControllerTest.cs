@@ -8,6 +8,7 @@ using TravelEaseServer.Controllers;
 using TravelEaseServer.Constant;
 using TravelEaseServer.Dto;
 using TravelEaseServer.Service.Interface;
+using TravelEaseServer.Enum;
  
 namespace TravelEaseServer.Tests.Controllers
 {
@@ -226,7 +227,7 @@ namespace TravelEaseServer.Tests.Controllers
         public async Task UpdateAvailability_NegativeAvailabilityOrBadId_ReturnsBadRequest()
         {
             // Case 1: Request payload provides unacceptable numbers
-            var invalidDto = new InventoryAvailabilityDto { InventoryId = 1, NewAvailability = -10, Status = 1 };
+            var invalidDto = new InventoryAvailabilityDto { InventoryId = 1, NewAvailability = -10, Status = InventoryStatus.Available };
             var result = await _controller.UpdateAvailability(1, invalidDto);
             Assert.IsInstanceOf<BadRequestObjectResult>(result);
         }
@@ -235,7 +236,7 @@ namespace TravelEaseServer.Tests.Controllers
         public async Task UpdateAvailability_ExplicitStatusValidationFails_ReturnsBadRequest()
         {
             // Case 2: Caller sets explicit status parameter but it is <= 0
-            var badStatusDto = new InventoryAvailabilityDto { InventoryId = 1, NewAvailability = 5, Status = 0 };
+            var badStatusDto = new InventoryAvailabilityDto { InventoryId = 1, NewAvailability = 5, Status = (InventoryStatus)0 };
             var result = await _controller.UpdateAvailability(1, badStatusDto);
             Assert.IsInstanceOf<BadRequestObjectResult>(result);
         }
@@ -256,8 +257,8 @@ namespace TravelEaseServer.Tests.Controllers
         {
             // Case 4: Status is null -> lookup succeeds -> patch runs with db status
             var patchDto = new InventoryAvailabilityDto { InventoryId = 12, NewAvailability = 4, Status = null };
-            var dbRecord = new InventoryResponseDto { InventoryId = 12, Status = 2 }; // DB status is 2
-            var updatedRecord = new InventoryResponseDto { InventoryId = 12, Availability = 4, Status = 2 };
+            var dbRecord = new InventoryResponseDto { InventoryId = 12, Status = InventoryStatus.Limited }; // DB status is 2
+            var updatedRecord = new InventoryResponseDto { InventoryId = 12, Availability = 4, Status = InventoryStatus.Limited };
  
             _mockInventoryService.Setup(s => s.GetInventoryByIdAsync(12)).ReturnsAsync(dbRecord);
             _mockInventoryService.Setup(s => s.UpdateAvailabilityAsync(12, 4, 2)).ReturnsAsync(updatedRecord);
@@ -271,8 +272,8 @@ namespace TravelEaseServer.Tests.Controllers
         public async Task UpdateAvailability_WithStatusProvided_SavesDirectly()
         {
             // Case 5: Direct Status provided -> bypasses query fetch flow
-            var patchDto = new InventoryAvailabilityDto { InventoryId = 12, NewAvailability = 8, Status = 3 };
-            var updatedRecord = new InventoryResponseDto { InventoryId = 12, Availability = 8, Status = 3 };
+            var patchDto = new InventoryAvailabilityDto { InventoryId = 12, NewAvailability = 8, Status = InventoryStatus.SoldOut };
+            var updatedRecord = new InventoryResponseDto { InventoryId = 12, Availability = 8, Status = InventoryStatus.SoldOut };
  
             _mockInventoryService.Setup(s => s.UpdateAvailabilityAsync(12, 8, 3)).ReturnsAsync(updatedRecord);
  

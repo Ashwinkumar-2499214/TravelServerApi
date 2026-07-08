@@ -11,5 +11,6 @@ namespace TravelEaseServer.Constant
         public const string NoRecordsFound = "No records found";
         public const string OperationSuccess = "Operation completed successfully";
         public const string OperationFailed = "Operation failed";
+        public const string UnauthorizedAccess = "Unauthorized access";
     }
 }

@@ -47,6 +47,18 @@ public class AuthenticationRepository : IAuthenticationRepository
         return true;
     }
 
+    public async Task<bool> ForgotPasswordAsync(string email, string newPasswordHash)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+        if (user == null) return false;
+
+        user.PasswordHash = newPasswordHash;
+        user.ModifiedDate = DateTime.UtcNow;
+        _context.Users.Update(user);
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
     public async Task<bool> LogoutAsync(long userId)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == userId);

@@ -1,11 +1,14 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace TravelEaseServer.Dto
 {
     public class KPIReportRequestDto
     {
+        [Required]
         public string Title { get; set; }
-        public string Scope { get; set; }
-        public string Metrics { get; set; }
-        public string ReportContent { get; set; }
+        public string? Scope { get; set; }
+        public string? Metrics { get; set; }
+        public string? ReportContent { get; set; }
     }
 
     public class KPIReportResponseDto
@@ -20,7 +23,7 @@ namespace TravelEaseServer.Dto
 
     public class KPIReportSearchDto
     {
-        public string SearchTerm { get; set; }
+        public string? SearchTerm { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
         public int PageNumber { get; set; } = 1;
@@ -34,6 +37,11 @@ namespace TravelEaseServer.Dto
         public int TotalCount { get; set; }
         public string Period { get; set; }
         public object Data { get; set; }
+    }
+
+    public class DashboardFilterDto
+    {
+        public string? Filter { get; set; } = "month";
     }
 
     public class TrendAnalysisDto

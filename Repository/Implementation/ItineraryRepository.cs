@@ -147,12 +147,15 @@ namespace TravelEaseServer.Repository.Implementation
         {
             try
             {
-                var itinerary = await _context.Itineraries.FirstOrDefaultAsync(i => i.ItineraryId == itineraryId);
+                var itinerary = await _context.Itineraries
+                    .Include(i => i.ItineraryBookings)
+                    .FirstOrDefaultAsync(i => i.ItineraryId == itineraryId);
                 if (itinerary == null)
                 {
                     return false;
                 }
 
+                _context.ItineraryBookings.RemoveRange(itinerary.ItineraryBookings);
                 _context.Itineraries.Remove(itinerary);
                 await _context.SaveChangesAsync();
                 return true;

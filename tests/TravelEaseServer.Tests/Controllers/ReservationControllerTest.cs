@@ -13,13 +13,15 @@ namespace TravelEaseServer.Tests.Controllers
     public class ReservationsControllerTests
     {
         private Mock<IReservationService> _mockReservationService;
+        private Mock<INotificationService> _mockNotificationService;
         private ReservationsController _controller;
  
         [SetUp]
         public void Setup()
         {
             _mockReservationService = new Mock<IReservationService>();
-            _controller = new ReservationsController(_mockReservationService.Object);
+            _mockNotificationService = new Mock<INotificationService>();
+            _controller = new ReservationsController(_mockReservationService.Object, _mockNotificationService.Object);
         }
  
         #region Helper Methods

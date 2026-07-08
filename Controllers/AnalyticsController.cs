@@ -22,7 +22,7 @@ public class AnalyticsController : ControllerBase
     [Authorize(Roles = "Admin,CorporateTravelManager,ComplianceOfficer")]
     public async Task<IActionResult> GetAllKPIReports([FromQuery] KPIReportSearchDto searchDto)
     {
-        if (!ModelState.IsValid || searchDto == null)
+        if (!ModelState.IsValid)
         {
             return BadRequest(new { message = GeneralConstants.InvalidInput });
         }
@@ -84,35 +84,50 @@ public class AnalyticsController : ControllerBase
 
     [HttpGet("dashboards/travel-spend")]
     [Authorize(Roles = "Admin,FinanceOfficer,CorporateTravelManager")]
-    public async Task<IActionResult> GetTravelSpendDashboard()
+    public async Task<IActionResult> GetTravelSpendDashboard([FromQuery] DashboardFilterDto filter)
     {
-        var data = await _analyticsService.GetTravelSpendDashboardAsync();
-
-        return data != null
-            ? Ok(new { message = AnalyticsConstants.DashboardDataRetrievedSuccess, data })
-            : NotFound(new { message = GeneralConstants.InvalidInput });
+        var data = await _analyticsService.GetTravelSpendDashboardAsync(filter.Filter ?? "month");
+        return data != null ? Ok(new { message = AnalyticsConstants.DashboardDataRetrievedSuccess, data }) : NotFound(new { message = GeneralConstants.InvalidInput });
     }
 
     [HttpGet("dashboards/booking-volume")]
     [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager")]
-    public async Task<IActionResult> GetBookingVolumeDashboard()
+    public async Task<IActionResult> GetBookingVolumeDashboard([FromQuery] DashboardFilterDto filter)
     {
-        var data = await _analyticsService.GetBookingVolumeDashboardAsync();
-
-        return data != null
-            ? Ok(new { message = AnalyticsConstants.DashboardDataRetrievedSuccess, data })
-            : NotFound(new { message = GeneralConstants.InvalidInput });
+        var data = await _analyticsService.GetBookingVolumeDashboardAsync(filter.Filter ?? "month");
+        return data != null ? Ok(new { message = AnalyticsConstants.DashboardDataRetrievedSuccess, data }) : NotFound(new { message = GeneralConstants.InvalidInput });
     }
 
     [HttpGet("dashboards/cancellations")]
     [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager,ComplianceOfficer")]
-    public async Task<IActionResult> GetCancellationDashboard()
+    public async Task<IActionResult> GetCancellationDashboard([FromQuery] DashboardFilterDto filter)
     {
-        var data = await _analyticsService.GetCancellationDashboardAsync();
+        var data = await _analyticsService.GetCancellationDashboardAsync(filter.Filter ?? "month");
+        return data != null ? Ok(new { message = AnalyticsConstants.DashboardDataRetrievedSuccess, data }) : NotFound(new { message = GeneralConstants.InvalidInput });
+    }
 
-        return data != null
-            ? Ok(new { message = AnalyticsConstants.DashboardDataRetrievedSuccess, data })
-            : NotFound(new { message = GeneralConstants.InvalidInput });
+    [HttpGet("dashboards/avg-booking-value")]
+    [Authorize(Roles = "Admin,FinanceOfficer,CorporateTravelManager")]
+    public async Task<IActionResult> GetAvgBookingValueDashboard([FromQuery] DashboardFilterDto filter)
+    {
+        var data = await _analyticsService.GetAvgBookingValueDashboardAsync(filter.Filter ?? "month");
+        return data != null ? Ok(new { message = AnalyticsConstants.DashboardDataRetrievedSuccess, data }) : NotFound(new { message = GeneralConstants.InvalidInput });
+    }
+
+    [HttpGet("dashboards/top-spenders")]
+    [Authorize(Roles = "Admin,FinanceOfficer,CorporateTravelManager")]
+    public async Task<IActionResult> GetTopSpendersDashboard([FromQuery] DashboardFilterDto filter)
+    {
+        var data = await _analyticsService.GetTopSpendersDashboardAsync(filter.Filter ?? "month");
+        return data != null ? Ok(new { message = AnalyticsConstants.DashboardDataRetrievedSuccess, data }) : NotFound(new { message = GeneralConstants.InvalidInput });
+    }
+
+    [HttpGet("dashboards/revenue-by-type")]
+    [Authorize(Roles = "Admin,FinanceOfficer,CorporateTravelManager")]
+    public async Task<IActionResult> GetRevenueByTypeDashboard([FromQuery] DashboardFilterDto filter)
+    {
+        var data = await _analyticsService.GetRevenueByTypeDashboardAsync(filter.Filter ?? "month");
+        return data != null ? Ok(new { message = AnalyticsConstants.DashboardDataRetrievedSuccess, data }) : NotFound(new { message = GeneralConstants.InvalidInput });
     }
 
     [HttpGet("trends/spend-per-traveler")]

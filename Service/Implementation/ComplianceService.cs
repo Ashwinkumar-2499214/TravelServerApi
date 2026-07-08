@@ -32,12 +32,12 @@ namespace TravelEaseServer.Service.Implementation
                 string autoMetrics;
                 string autoContent;
 
-                if (cleanTitle.Contains("financial") || cleanTitle.Contains("billing"))
-                {
-                    var travelSpend = await _analyticsService.GetTravelSpendDashboardAsync();
-                    var cancellations = await _analyticsService.GetCancellationDashboardAsync();
-                    var spendPerTraveler = await _analyticsService.GetSpendPerTravelerTrendAsync();
-                    var destinations = await _analyticsService.GetDestinationTrendAsync();
+                    if (cleanTitle.Contains("financial") || cleanTitle.Contains("billing"))
+                    {
+                        var travelSpend = await _analyticsService.GetTravelSpendDashboardAsync("month");
+                        var cancellations = await _analyticsService.GetCancellationDashboardAsync("month");
+                        var spendPerTraveler = await _analyticsService.GetSpendPerTravelerTrendAsync();
+                        var destinations = await _analyticsService.GetDestinationTrendAsync();
 
                     int totalInvoices = travelSpend?.TotalCount ?? await _complianceRepository.GetTotalInvoicesCountAsync(startRange, endRange);
                     int discrepancyCount = await _complianceRepository.GetFinancialDiscrepanciesCountAsync(startRange, endRange);

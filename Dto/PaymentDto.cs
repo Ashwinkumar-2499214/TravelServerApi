@@ -2,6 +2,7 @@ namespace TravelEaseServer.Dto
 {
     public class PaymentRequestDto
     {
+        public long UserId { get; set; }
         public long InvoiceId { get; set; }
         public decimal Amount { get; set; }
         public int Method { get; set; }
@@ -11,6 +12,7 @@ namespace TravelEaseServer.Dto
     public class PaymentResponseDto
     {
         public long PaymentId { get; set; }
+        public long UserId { get; set; }
         public long InvoiceId { get; set; }
         public decimal Amount { get; set; }
         public DateTime PaymentDate { get; set; }

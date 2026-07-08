@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using TravelEaseServer.Constant;
 using TravelEaseServer.Dto;
+using TravelEaseServer.Enum;
 using TravelEaseServer.Service.Interface;
 
 namespace TravelEaseServer.Controllers;
@@ -12,10 +14,14 @@ namespace TravelEaseServer.Controllers;
 public class BookingsController : ControllerBase
 {
     private readonly IBookingService _bookingService;
+    private readonly INotificationService _notificationService;
 
-    public BookingsController(IBookingService bookingService)
+    public BookingsController(
+        IBookingService bookingService,
+        INotificationService notificationService)
     {
         _bookingService = bookingService;
+        _notificationService = notificationService;
     }
 
     [HttpGet]
@@ -45,9 +51,26 @@ public class BookingsController : ControllerBase
 
         var data = await _bookingService.CreateBookingAsync(bookingDto);
 
-        return data != null
-            ? Ok(new { message = BookingConstants.BookingCreatedSuccess, data })
-            : BadRequest(new { message = GeneralConstants.InvalidInput });
+        if (data != null)
+        {
+            // Trigger booking confirmation notification
+            try
+            {
+                    await _notificationService.TriggerBookingNotificationAsync(
+                    bookingDto.UserId,
+                    $"Your booking has been confirmed. Item: {data.ItemType}, Amount: ${data.Amount}.",
+                    NotificationCategory.BookingConfirmation
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Notification trigger failed for booking creation: {ex.Message}");
+            }
+
+            return Ok(new { message = BookingConstants.BookingCreatedSuccess, data });
+        }
+
+        return BadRequest(new { message = GeneralConstants.InvalidInput });
     }
 
     [HttpGet("{bookingId}")]
@@ -77,13 +100,30 @@ public class BookingsController : ControllerBase
 
         var data = await _bookingService.UpdateBookingAsync(bookingId, bookingDto);
 
-        return data != null
-            ? Ok(new { message = BookingConstants.BookingUpdateSuccess, data })
-            : NotFound(new { message = BookingConstants.BookingNotFound });
+        if (data != null)
+        {
+            // Trigger booking update notification
+            try
+            {
+                    await _notificationService.TriggerBookingNotificationAsync(
+                    bookingDto.UserId,
+                    $"Your booking for {data.ItemType} has been updated. New Amount: ${data.Amount}.",
+                    NotificationCategory.SystemAlert
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Notification trigger failed for booking update: {ex.Message}");
+            }
+
+            return Ok(new { message = BookingConstants.BookingUpdateSuccess, data });
+        }
+
+        return NotFound(new { message = BookingConstants.BookingNotFound });
     }
 
     [HttpDelete("{bookingId}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager,ComplianceOfficer,Traveler")]
     public async Task<IActionResult> DeleteBooking(long bookingId)
     {
         if (bookingId <= 0)
@@ -91,11 +131,31 @@ public class BookingsController : ControllerBase
             return BadRequest(new { message = GeneralConstants.InvalidInput });
         }
 
+        // Get booking details before deletion to send notification
+        var existingBooking = await _bookingService.GetBookingByIdAsync(bookingId);
+
         var result = await _bookingService.DeleteBookingAsync(bookingId);
 
-        return result
-            ? Ok(new { message = BookingConstants.BookingDeleteSuccess })
-            : NotFound(new { message = BookingConstants.BookingNotFound });
+        if (result && existingBooking != null)
+        {
+            // Trigger booking cancellation notification
+            try
+            {
+                    await _notificationService.TriggerBookingNotificationAsync(
+                    existingBooking.UserId,
+                    $"Your booking for {existingBooking.ItemType} has been cancelled.",
+                    NotificationCategory.BookingCancellation
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Notification trigger failed for booking deletion: {ex.Message}");
+            }
+
+            return Ok(new { message = BookingConstants.BookingDeleteSuccess });
+        }
+
+        return NotFound(new { message = BookingConstants.BookingNotFound });
     }
 
     [HttpPatch("{bookingId}/status")]
@@ -109,8 +169,41 @@ public class BookingsController : ControllerBase
 
         var data = await _bookingService.UpdateBookingStatusAsync(bookingId, statusDto.NewStatus);
 
-        return data != null
-            ? Ok(new { message = GeneralConstants.OperationSuccess, data })
-            : NotFound(new { message = BookingConstants.BookingNotFound });
+        if (data != null)
+        {
+            // Trigger booking status update notification
+            try
+            {
+                var statusMessage = GetBookingStatusMessage(statusDto.NewStatus);
+                    await _notificationService.TriggerBookingNotificationAsync(
+                    data.UserId,
+                    $"Your booking for {data.ItemType} status has been updated to: {statusMessage}.",
+                    NotificationCategory.SystemAlert
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Notification trigger failed for booking status update: {ex.Message}");
+            }
+
+            return Ok(new { message = GeneralConstants.OperationSuccess, data });
+        }
+
+        return NotFound(new { message = BookingConstants.BookingNotFound });
+    }
+
+    /// <summary>
+    /// Helper method to convert booking status code to readable message
+    /// </summary>
+    private static string GetBookingStatusMessage(int statusCode)
+    {
+        return statusCode switch
+        {
+            0 => "Pending",
+            1 => "Confirmed",
+            2 => "Cancelled",
+            3 => "Completed",
+            _ => "Unknown"
+        };
     }
 }

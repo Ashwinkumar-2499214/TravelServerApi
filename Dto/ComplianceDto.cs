@@ -17,7 +17,7 @@ namespace TravelEaseServer.Dto
 
     public class ComplianceReportSearchDto
     {
-        public string SearchTerm { get; set; }
+        public string? SearchTerm { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
         public int PageNumber { get; set; } = 1;
@@ -28,11 +28,12 @@ namespace TravelEaseServer.Dto
     {
         public long AuditLogId { get; set; }
         public long UserId { get; set; }
+        public string UserName { get; set; } = string.Empty;
         public string Action { get; set; } = string.Empty;
         public string EntityType { get; set; } = string.Empty;
         public long EntityId { get; set; }
-        public object? OldValues { get; set; } // Keeps output as a clean JSON object
-        public object? NewValues { get; set; } // Keeps output as a clean JSON object
+        public object? OldValues { get; set; }
+        public object? NewValues { get; set; }
         public DateTime Timestamp { get; set; }
         public string? IpAddress { get; set; }
     }
@@ -40,8 +41,8 @@ namespace TravelEaseServer.Dto
     public class AuditLogSearchDto
     {
         public long? UserId { get; set; }
-        public string EntityType { get; set; }
-        public string Action { get; set; }
+        public string? EntityType { get; set; }
+        public string? Action { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
         public int PageNumber { get; set; } = 1;

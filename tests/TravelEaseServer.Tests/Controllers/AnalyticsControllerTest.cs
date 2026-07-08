@@ -227,9 +227,9 @@ namespace TravelEaseServer.Tests.Controllers
         public async Task GetTravelSpendDashboard_Success_ReturnsOkWithDashboardData()
         {
             var expectedDashboard = new DashboardDataDto { Title = "Travel Spend", TotalAmount = 150000.75m, TotalCount = 350, Period = "Monthly" };
-            _mockService.Setup(s => s.GetTravelSpendDashboardAsync()).ReturnsAsync(expectedDashboard);
+            _mockService.Setup(s => s.GetTravelSpendDashboardAsync("month")).ReturnsAsync(expectedDashboard);
 
-            var result = await _controller.GetTravelSpendDashboard() as OkObjectResult;
+            var result = await _controller.GetTravelSpendDashboard(new DashboardFilterDto { Filter = "month" }) as OkObjectResult;
 
             Assert.IsNotNull(result);
             var value = result!.Value!;
@@ -244,9 +244,9 @@ namespace TravelEaseServer.Tests.Controllers
         [Test]
         public async Task GetTravelSpendDashboard_NotFound_ReturnsNotFound()
         {
-            _mockService.Setup(s => s.GetTravelSpendDashboardAsync()).ReturnsAsync((DashboardDataDto?)null);
+            _mockService.Setup(s => s.GetTravelSpendDashboardAsync("month")).ReturnsAsync((DashboardDataDto?)null);
 
-            var result = await _controller.GetTravelSpendDashboard();
+            var result = await _controller.GetTravelSpendDashboard(new DashboardFilterDto { Filter = "month" });
 
             Assert.IsInstanceOf<NotFoundObjectResult>(result);
         }
@@ -254,9 +254,9 @@ namespace TravelEaseServer.Tests.Controllers
         [Test]
         public async Task GetTravelSpendDashboard_ServiceThrows_PropagatesException()
         {
-            _mockService.Setup(s => s.GetTravelSpendDashboardAsync()).ThrowsAsync(new Exception("Timeout"));
+            _mockService.Setup(s => s.GetTravelSpendDashboardAsync("month")).ThrowsAsync(new Exception("Timeout"));
 
-            Assert.ThrowsAsync<Exception>(async () => await _controller.GetTravelSpendDashboard());
+            Assert.ThrowsAsync<Exception>(async () => await _controller.GetTravelSpendDashboard(new DashboardFilterDto { Filter = "month" }));
         }
 
         #endregion
@@ -267,9 +267,9 @@ namespace TravelEaseServer.Tests.Controllers
         public async Task GetBookingVolumeDashboard_Success_ReturnsOkWithData()
         {
             var expectedDashboard = new DashboardDataDto { Title = "Booking Volume", TotalCount = 842, TotalAmount = 0m };
-            _mockService.Setup(s => s.GetBookingVolumeDashboardAsync()).ReturnsAsync(expectedDashboard);
+            _mockService.Setup(s => s.GetBookingVolumeDashboardAsync("month")).ReturnsAsync(expectedDashboard);
 
-            var result = await _controller.GetBookingVolumeDashboard() as OkObjectResult;
+            var result = await _controller.GetBookingVolumeDashboard(new DashboardFilterDto { Filter = "month" }) as OkObjectResult;
 
             Assert.IsNotNull(result);
             var value = result!.Value!;
@@ -284,9 +284,9 @@ namespace TravelEaseServer.Tests.Controllers
         [Test]
         public async Task GetBookingVolumeDashboard_NotFound_ReturnsNotFound()
         {
-            _mockService.Setup(s => s.GetBookingVolumeDashboardAsync()).ReturnsAsync((DashboardDataDto?)null);
+            _mockService.Setup(s => s.GetBookingVolumeDashboardAsync("month")).ReturnsAsync((DashboardDataDto?)null);
 
-            var result = await _controller.GetBookingVolumeDashboard();
+            var result = await _controller.GetBookingVolumeDashboard(new DashboardFilterDto { Filter = "month" });
 
             Assert.IsInstanceOf<NotFoundObjectResult>(result);
         }
@@ -295,9 +295,9 @@ namespace TravelEaseServer.Tests.Controllers
         public async Task GetBookingVolumeDashboard_EmptyDashboardObject_StillReturnsOk()
         {
             var emptyDashboard = new DashboardDataDto { TotalCount = 0, Title = "Empty Dashboard" };
-            _mockService.Setup(s => s.GetBookingVolumeDashboardAsync()).ReturnsAsync(emptyDashboard);
+            _mockService.Setup(s => s.GetBookingVolumeDashboardAsync("month")).ReturnsAsync(emptyDashboard);
 
-            var result = await _controller.GetBookingVolumeDashboard() as OkObjectResult;
+            var result = await _controller.GetBookingVolumeDashboard(new DashboardFilterDto { Filter = "month" }) as OkObjectResult;
             Assert.IsNotNull(result);
         }
 
@@ -309,9 +309,9 @@ namespace TravelEaseServer.Tests.Controllers
         public async Task GetCancellationDashboard_Success_ReturnsOkWithData()
         {
             var expectedDashboard = new DashboardDataDto { Title = "Cancellations Overview", TotalCount = 14 };
-            _mockService.Setup(s => s.GetCancellationDashboardAsync()).ReturnsAsync(expectedDashboard);
+            _mockService.Setup(s => s.GetCancellationDashboardAsync("month")).ReturnsAsync(expectedDashboard);
 
-            var result = await _controller.GetCancellationDashboard() as OkObjectResult;
+            var result = await _controller.GetCancellationDashboard(new DashboardFilterDto { Filter = "month" }) as OkObjectResult;
 
             Assert.IsNotNull(result);
             var value = result!.Value!;
@@ -326,9 +326,9 @@ namespace TravelEaseServer.Tests.Controllers
         [Test]
         public async Task GetCancellationDashboard_NotFound_ReturnsNotFound()
         {
-            _mockService.Setup(s => s.GetCancellationDashboardAsync()).ReturnsAsync((DashboardDataDto?)null);
+            _mockService.Setup(s => s.GetCancellationDashboardAsync("month")).ReturnsAsync((DashboardDataDto?)null);
 
-            var result = await _controller.GetCancellationDashboard();
+            var result = await _controller.GetCancellationDashboard(new DashboardFilterDto { Filter = "month" });
 
             Assert.IsInstanceOf<NotFoundObjectResult>(result);
         }
@@ -336,9 +336,9 @@ namespace TravelEaseServer.Tests.Controllers
         [Test]
         public async Task GetCancellationDashboard_ServiceFailsWithError_PropagatesException()
         {
-            _mockService.Setup(s => s.GetCancellationDashboardAsync()).ThrowsAsync(new InvalidOperationException("Connection Broken"));
+            _mockService.Setup(s => s.GetCancellationDashboardAsync("month")).ThrowsAsync(new InvalidOperationException("Connection Broken"));
 
-            Assert.ThrowsAsync<InvalidOperationException>(async () => await _controller.GetCancellationDashboard());
+            Assert.ThrowsAsync<InvalidOperationException>(async () => await _controller.GetCancellationDashboard(new DashboardFilterDto { Filter = "month" }));
         }
 
         #endregion

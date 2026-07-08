@@ -14,13 +14,15 @@ namespace TravelEaseServer.Tests
     public class InvoicesControllerTests
     {
         private Mock<IInvoiceService> _mockInvoiceService;
+        private Mock<INotificationService> _mockNotificationService;
         private InvoicesController _controller;
 
         [SetUp]
         public void SetUp()
         {
             _mockInvoiceService = new Mock<IInvoiceService>();
-            _controller = new InvoicesController(_mockInvoiceService.Object);
+            _mockNotificationService = new Mock<INotificationService>();
+            _controller = new InvoicesController(_mockInvoiceService.Object, _mockNotificationService.Object);
         }
 
         #region GetAllInvoices Tests

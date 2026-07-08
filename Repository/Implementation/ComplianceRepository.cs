@@ -97,7 +97,7 @@ namespace TravelEaseServer.Repository.Implementation
 
         public async Task<IEnumerable<AuditLogResponseDto>> GetAuditLogsAsync(AuditLogSearchDto searchDto)
         {
-            var query = _context.AuditLogs.AsNoTracking();
+            var query = _context.AuditLogs.Include(a => a.User).AsNoTracking().AsQueryable();
 
             // Apply filters
             if (searchDto.UserId.HasValue)
@@ -213,6 +213,7 @@ namespace TravelEaseServer.Repository.Implementation
             {
                 AuditLogId = auditLog.AuditLogId,
                 UserId = auditLog.UserId,
+                UserName = auditLog.User?.Name ?? string.Empty,
                 Action = auditLog.Action,
                 EntityType = auditLog.EntityType,
                 EntityId = auditLog.EntityId,

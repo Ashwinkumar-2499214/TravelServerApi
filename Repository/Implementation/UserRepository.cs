@@ -59,9 +59,20 @@ namespace TravelEaseServer.Repository.Implementation
 
         public async Task<UserResponseDto> UpdateUserAsync(User user)
         {
-            _context.Entry(user).State = EntityState.Modified;
+            var existing = await _context.Users.FirstOrDefaultAsync(u => u.UserId == user.UserId);
+            if (existing == null) throw new KeyNotFoundException($"User with ID {user.UserId} not found.");
+
+            existing.Name = user.Name;
+            existing.Email = user.Email;
+            existing.Phone = user.Phone;
+            existing.Role = user.Role;
+            existing.ModifiedDate = DateTime.UtcNow;
+
+            if (!string.IsNullOrWhiteSpace(user.PasswordHash))
+                existing.PasswordHash = user.PasswordHash;
+
             await _context.SaveChangesAsync();
-            return MapUserToDto(user);
+            return MapUserToDto(existing);
         }
 
         public async Task<bool> DeleteUserAsync(long userId)

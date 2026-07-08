@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TravelEaseServer.Constant;
 using TravelEaseServer.Dto;
+using TravelEaseServer.Enum;
 using TravelEaseServer.Service.Interface;
 
 namespace TravelEaseServer.Controllers
@@ -12,10 +13,14 @@ namespace TravelEaseServer.Controllers
     public class PaymentsController : ControllerBase
     {
         private readonly IPaymentService _paymentService;
+        private readonly INotificationService _notificationService;
 
-        public PaymentsController(IPaymentService paymentService)
+        public PaymentsController(
+            IPaymentService paymentService,
+            INotificationService notificationService)
         {
             _paymentService = paymentService;
+            _notificationService = notificationService;
         }
 
         [HttpGet]
@@ -42,9 +47,27 @@ namespace TravelEaseServer.Controllers
             if (!ModelState.IsValid || paymentDto == null)
                 return BadRequest(new { message = GeneralConstants.InvalidInput });
 
-            paymentDto.InvoiceId = invoiceId; 
+            paymentDto.InvoiceId = invoiceId;
 
             var data = await _paymentService.CreatePaymentAsync(paymentDto);
+
+            if (data != null)
+            {
+                // Trigger payment confirmation notification
+                try
+                {
+                    await _notificationService.TriggerPaymentNotificationAsync(
+                        paymentDto.UserId,
+                        $"Your payment of ${data.Amount} has been successfully processed.",
+                        NotificationCategory.PaymentConfirmation
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Notification trigger failed for payment creation: {ex.Message}");
+                }
+            }
+
             return Ok(new { message = PaymentConstants.PaymentCreatedSuccess, data });
         }
 
@@ -60,8 +83,31 @@ namespace TravelEaseServer.Controllers
         [Authorize(Roles = "Admin,FinanceOfficer")]
         public async Task<IActionResult> UpdatePaymentStatus(long paymentId, [FromBody] PaymentStatusUpdateDto statusDto)
         {
+            if (!(ModelState.IsValid && statusDto != null))
+                return BadRequest(new { message = GeneralConstants.InvalidInput });
+
+            var data = await _paymentService.UpdatePaymentStatusAsync(paymentId, statusDto.NewStatus);
+
+            if (data != null)
+            {
+                // Trigger payment status update notification
+                try
+                {
+                    var statusMessage = GetPaymentStatusMessage(statusDto.NewStatus);
+                    await _notificationService.TriggerPaymentNotificationAsync(
+                        data.UserId,
+                        $"Your payment of ${data.Amount} status has been updated to: {statusMessage}.",
+                        NotificationCategory.SystemAlert
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Notification trigger failed for payment status update: {ex.Message}");
+                }
+            }
+
             return ModelState.IsValid && statusDto != null
-                ? Ok(new { message = PaymentConstants.PaymentStatusUpdateSuccess, data = await _paymentService.UpdatePaymentStatusAsync(paymentId, statusDto.NewStatus) })
+                ? Ok(new { message = PaymentConstants.PaymentStatusUpdateSuccess, data })
                 : BadRequest(new { message = GeneralConstants.InvalidInput });
         }
 
@@ -69,11 +115,50 @@ namespace TravelEaseServer.Controllers
         [Authorize(Roles = "Admin,FinanceOfficer")]
         public async Task<IActionResult> ProcessRefund(long paymentId, [FromBody] PaymentRefundDto refundDto)
         {
-            return ModelState.IsValid && refundDto != null
-                ? (await _paymentService.ProcessRefundAsync(paymentId, refundDto.RefundAmount, refundDto.Reason))
-                    ? Ok(new { message = PaymentConstants.RefundProcessedSuccess })
-                    : BadRequest(new { message = PaymentConstants.CannotRefundFailedPayment })
-                : BadRequest(new { message = GeneralConstants.InvalidInput });
+            if (!(ModelState.IsValid && refundDto != null))
+                return BadRequest(new { message = GeneralConstants.InvalidInput });
+
+            var result = await _paymentService.ProcessRefundAsync(paymentId, refundDto.RefundAmount, refundDto.Reason);
+
+            if (result)
+            {
+                // Trigger refund notification
+                try
+                {
+                    var payment = await _paymentService.GetPaymentByIdAsync(paymentId);
+                    if (payment != null)
+                    {
+                        await _notificationService.TriggerPaymentNotificationAsync(
+                            payment.UserId,
+                            $"A refund of ${refundDto.RefundAmount} has been processed for your payment of ${payment.Amount}. Reason: {refundDto.Reason}.",
+                            NotificationCategory.PaymentReminder
+                        );
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Notification trigger failed for refund processing: {ex.Message}");
+                }
+
+                return Ok(new { message = PaymentConstants.RefundProcessedSuccess });
+            }
+
+            return BadRequest(new { message = PaymentConstants.CannotRefundFailedPayment });
+        }
+
+        /// <summary>
+        /// Helper method to convert payment status code to readable message
+        /// </summary>
+        private static string GetPaymentStatusMessage(int statusCode)
+        {
+            return statusCode switch
+            {
+                0 => "Pending",
+                1 => "Completed",
+                2 => "Failed",
+                3 => "Refunded",
+                _ => "Unknown"
+            };
         }
     }
 }

@@ -16,13 +16,15 @@ namespace TravelEaseServer.Tests.Controllers
     public class BookingsControllerTests
     {
         private Mock<IBookingService> _mockService;
+        private Mock<INotificationService> _mockNotificationService;
         private BookingsController _controller;
 
         [SetUp]
         public void SetUp()
         {
             _mockService = new Mock<IBookingService>(MockBehavior.Strict);
-            _controller = new BookingsController(_mockService.Object);
+            _mockNotificationService = new Mock<INotificationService>();
+            _controller = new BookingsController(_mockService.Object, _mockNotificationService.Object);
         }
 
         [TearDown]

@@ -19,13 +19,43 @@ namespace TravelEaseServer.Service.Implementation
         {
             try
             {
+                var title = reportDto.Title ?? string.Empty;
+                var titleLower = title.ToLower();
+
+                string scope, metrics, reportContent;
+
+                if (titleLower.Contains("spend") || titleLower.Contains("travel spend"))
+                {
+                    scope = "Monthly travel expenditure across all bookings and travelers.";
+                    metrics = "Total spend, average spend per traveler, number of bookings, currency breakdown.";
+                    reportContent = "This report summarises total travel spend for the current period. It includes a breakdown of spend by booking type, average cost per traveler, and highlights any significant deviations from the previous period.";
+                }
+                else if (titleLower.Contains("booking") || titleLower.Contains("performance"))
+                {
+                    scope = "Booking activity and confirmation rates for the current reporting period.";
+                    metrics = "Total bookings, confirmed bookings, confirmation rate percentage, booking volume trend.";
+                    reportContent = "This report covers booking performance metrics including total volume, confirmation rates, and status distribution. It identifies patterns in booking behaviour and highlights periods of high or low activity.";
+                }
+                else if (titleLower.Contains("cancellation") || titleLower.Contains("rate"))
+                {
+                    scope = "Cancellation activity and rate analysis for the current reporting period.";
+                    metrics = "Total cancellations, cancellation rate, comparison to total bookings, trend over time.";
+                    reportContent = "This report analyses cancellation trends including total cancelled bookings, the cancellation rate as a percentage of all bookings, and identifies any patterns or anomalies that may require operational attention.";
+                }
+                else
+                {
+                    scope = "General analytics overview for the current reporting period.";
+                    metrics = "Key performance indicators across bookings, spend, and traveler activity.";
+                    reportContent = "This general KPI report provides an overview of system-wide analytics including booking volumes, travel spend, and traveler engagement metrics for the selected period.";
+                }
+
                 var report = new KPIReport
                 {
-                    Title = reportDto.Title,
-                    Scope = reportDto.Scope,
-                    Metrics = reportDto.Metrics,
+                    Title = title,
+                    Scope = scope,
+                    Metrics = metrics,
                     GeneratedDate = DateTime.UtcNow,
-                    ReportContent = reportDto.ReportContent
+                    ReportContent = reportContent
                 };
 
                 return await _analyticsRepository.CreateKPIReportAsync(report);
@@ -51,20 +81,23 @@ namespace TravelEaseServer.Service.Implementation
             return await _analyticsRepository.DeleteKPIReportAsync(reportId);
         }
 
-        public async Task<DashboardDataDto> GetTravelSpendDashboardAsync()
-        {
-            return await _analyticsRepository.GetTravelSpendDashboardAsync();
-        }
+        public async Task<DashboardDataDto> GetTravelSpendDashboardAsync(string filter)
+            => await _analyticsRepository.GetTravelSpendDashboardAsync(filter);
 
-        public async Task<DashboardDataDto> GetBookingVolumeDashboardAsync()
-        {
-            return await _analyticsRepository.GetBookingVolumeDashboardAsync();
-        }
+        public async Task<DashboardDataDto> GetBookingVolumeDashboardAsync(string filter)
+            => await _analyticsRepository.GetBookingVolumeDashboardAsync(filter);
 
-        public async Task<DashboardDataDto> GetCancellationDashboardAsync()
-        {
-            return await _analyticsRepository.GetCancellationDashboardAsync();
-        }
+        public async Task<DashboardDataDto> GetCancellationDashboardAsync(string filter)
+            => await _analyticsRepository.GetCancellationDashboardAsync(filter);
+
+        public async Task<DashboardDataDto> GetAvgBookingValueDashboardAsync(string filter)
+            => await _analyticsRepository.GetAvgBookingValueDashboardAsync(filter);
+
+        public async Task<DashboardDataDto> GetTopSpendersDashboardAsync(string filter)
+            => await _analyticsRepository.GetTopSpendersDashboardAsync(filter);
+
+        public async Task<DashboardDataDto> GetRevenueByTypeDashboardAsync(string filter)
+            => await _analyticsRepository.GetRevenueByTypeDashboardAsync(filter);
 
         public async Task<TrendAnalysisDto> GetSpendPerTravelerTrendAsync()
         {

@@ -25,7 +25,7 @@ namespace TravelEaseServer.Service.Implementation
                     Title = itineraryDto.Title,
                     StartDate = itineraryDto.StartDate,
                     EndDate = itineraryDto.EndDate,
-                    Status = (int)Enum.ItineraryStatus.Draft,
+                    Status = (int)Enum.ItineraryStatus.Active,
                     CreatedDate = DateTime.UtcNow
                 };
 

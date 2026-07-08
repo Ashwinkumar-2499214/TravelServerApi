@@ -195,6 +195,39 @@ namespace TravelEaseServer.Migrations
                     b.ToTable("Inventories");
                 });
 
+            modelBuilder.Entity("TravelEaseServer.Model.InventoryMedia", b =>
+                {
+                    b.Property<long>("MediaId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("MediaId"));
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("InventoryId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("MediaType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("UploadedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("MediaId");
+
+                    b.HasIndex("InventoryId");
+
+                    b.ToTable("InventoryMedia");
+                });
+
             modelBuilder.Entity("TravelEaseServer.Model.Invoice", b =>
                 {
                     b.Property<long>("InvoiceId")
@@ -614,6 +647,17 @@ namespace TravelEaseServer.Migrations
                     b.Navigation("Partner");
                 });
 
+            modelBuilder.Entity("TravelEaseServer.Model.InventoryMedia", b =>
+                {
+                    b.HasOne("TravelEaseServer.Model.Inventory", "Inventory")
+                        .WithMany("Media")
+                        .HasForeignKey("InventoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Inventory");
+                });
+
             modelBuilder.Entity("TravelEaseServer.Model.Invoice", b =>
                 {
                     b.HasOne("TravelEaseServer.Model.Booking", "Booking")
@@ -700,6 +744,8 @@ namespace TravelEaseServer.Migrations
             modelBuilder.Entity("TravelEaseServer.Model.Inventory", b =>
                 {
                     b.Navigation("Bookings");
+
+                    b.Navigation("Media");
                 });
 
             modelBuilder.Entity("TravelEaseServer.Model.Invoice", b =>

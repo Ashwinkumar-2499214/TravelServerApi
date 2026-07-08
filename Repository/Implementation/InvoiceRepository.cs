@@ -20,6 +20,12 @@ namespace TravelEaseServer.Repository.Implementation
             {
                 _context.Invoices.Add(invoice);
                 await _context.SaveChangesAsync();
+                await _context.Entry(invoice).Reference(i => i.Booking).LoadAsync();
+                if (invoice.Booking != null)
+                {
+                    await _context.Entry(invoice.Booking).Reference(b => b.User).LoadAsync();
+                    await _context.Entry(invoice.Booking).Reference(b => b.Inventory).LoadAsync();
+                }
                 return MapInvoiceToDto(invoice);
             }
             catch (DbUpdateException ex)
@@ -34,6 +40,8 @@ namespace TravelEaseServer.Repository.Implementation
             {
                 var invoice = await _context.Invoices
                     .AsNoTracking()
+                    .Include(i => i.Booking).ThenInclude(b => b.User)
+                    .Include(i => i.Booking).ThenInclude(b => b.Inventory)
                     .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId);
 
                 return invoice != null ? MapInvoiceToDto(invoice) : null;
@@ -48,9 +56,18 @@ namespace TravelEaseServer.Repository.Implementation
         {
             try
             {
-                var query = _context.Invoices.AsNoTracking();
+                var query = _context.Invoices
+                    .Include(i => i.Booking).ThenInclude(b => b.User)
+                    .Include(i => i.Booking).ThenInclude(b => b.Inventory)
+                    .AsNoTracking().AsQueryable();
 
                 // Apply filters
+                if (searchDto.UserId.HasValue)
+                {
+                    query = query.Where(i => _context.Bookings
+                        .Any(b => b.BookingId == i.BookingId && b.UserId == searchDto.UserId.Value));
+                }
+
                 if (searchDto.BookingId.HasValue)
                 {
                     query = query.Where(i => i.BookingId == searchDto.BookingId.Value);
@@ -93,6 +110,8 @@ namespace TravelEaseServer.Repository.Implementation
             {
                 var invoices = await _context.Invoices
                     .AsNoTracking()
+                    .Include(i => i.Booking).ThenInclude(b => b.User)
+                    .Include(i => i.Booking).ThenInclude(b => b.Inventory)
                     .Where(i => i.BookingId == bookingId)
                     .OrderByDescending(i => i.InvoiceDate)
                     .ToListAsync();
@@ -180,6 +199,9 @@ namespace TravelEaseServer.Repository.Implementation
             {
                 InvoiceId = invoice.InvoiceId,
                 BookingId = invoice.BookingId,
+                UserId = invoice.Booking?.UserId ?? 0,
+                InventoryName = invoice.Booking?.Inventory?.ItemType,
+                UserName = invoice.Booking?.User?.Name,
                 Amount = invoice.Amount,
                 InvoiceDate = invoice.InvoiceDate,
                 DueDate = invoice.DueDate,

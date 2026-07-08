@@ -13,6 +13,7 @@ namespace TravelEaseServer.Dto
     {
         public long BookingId { get; set; }
         public long UserId { get; set; }
+        public string UserName { get; set; }
         public long PartnerId { get; set; }
         public long InventoryId { get; set; }
         public string ItemType { get; set; }

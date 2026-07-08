@@ -104,104 +104,104 @@ namespace TravelEaseServer.Repository.Implementation
             }
         }
 
-        public async Task<DashboardDataDto> GetTravelSpendDashboardAsync()
+        public async Task<DashboardDataDto> GetTravelSpendDashboardAsync(string filter)
         {
             try
             {
-                var currentMonth = DateTime.UtcNow.Month;
-                var currentYear = DateTime.UtcNow.Year;
-
-                var totalSpend = await _context.Bookings
-                    .AsNoTracking()
-                    .Where(b => b.CreatedDate.Month == currentMonth && b.CreatedDate.Year == currentYear)
-                    .SumAsync(b => b.Amount);
-
-                var bookingCount = await _context.Bookings
-                    .AsNoTracking()
-                    .Where(b => b.CreatedDate.Month == currentMonth && b.CreatedDate.Year == currentYear)
+                var (from, to, period) = GetDateRange(filter);
+                var totalSpend = await _context.Bookings.AsNoTracking()
+                    .Where(b => b.CreatedDate >= from && b.CreatedDate <= to)
+                    .SumAsync(b => (decimal?)b.Amount) ?? 0;
+                var bookingCount = await _context.Bookings.AsNoTracking()
+                    .Where(b => b.CreatedDate >= from && b.CreatedDate <= to)
                     .CountAsync();
-
-                return new DashboardDataDto
-                {
-                    Title = "Travel Spend Dashboard",
-                    TotalAmount = totalSpend,
-                    TotalCount = bookingCount,
-                    Period = $"{currentYear}-{currentMonth:D2}",
-                    Data = new { CurrencyCode = "USD" }
-                };
+                return new DashboardDataDto { Title = "Travel Spend", TotalAmount = totalSpend, TotalCount = bookingCount, Period = period, Data = new { CurrencyCode = "USD" } };
             }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException("Error retrieving travel spend dashboard data.", ex);
-            }
+            catch (Exception ex) { throw new InvalidOperationException("Error retrieving travel spend dashboard data.", ex); }
         }
 
-        public async Task<DashboardDataDto> GetBookingVolumeDashboardAsync()
+        public async Task<DashboardDataDto> GetBookingVolumeDashboardAsync(string filter)
         {
             try
             {
-                var currentMonth = DateTime.UtcNow.Month;
-                var currentYear = DateTime.UtcNow.Year;
-
-                var totalBookings = await _context.Bookings
-                    .AsNoTracking()
-                    .Where(b => b.CreatedDate.Month == currentMonth && b.CreatedDate.Year == currentYear)
+                var (from, to, period) = GetDateRange(filter);
+                var totalBookings = await _context.Bookings.AsNoTracking()
+                    .Where(b => b.CreatedDate >= from && b.CreatedDate <= to)
                     .CountAsync();
-
-                var confirmedBookings = await _context.Bookings
-                    .AsNoTracking()
-                    .Where(b => b.CreatedDate.Month == currentMonth &&
-                               b.CreatedDate.Year == currentYear &&
-                               b.Status == 1)
+                var confirmedBookings = await _context.Bookings.AsNoTracking()
+                    .Where(b => b.CreatedDate >= from && b.CreatedDate <= to && b.Status == 1)
                     .CountAsync();
-
-                return new DashboardDataDto
-                {
-                    Title = "Booking Volume Dashboard",
-                    TotalAmount = totalBookings,
-                    TotalCount = confirmedBookings,
-                    Period = $"{currentYear}-{currentMonth:D2}",
-                    Data = new { ConfirmationRate = totalBookings > 0 ? (decimal)confirmedBookings / totalBookings * 100 : 0 }
-                };
+                return new DashboardDataDto { Title = "Booking Volume", TotalAmount = totalBookings, TotalCount = confirmedBookings, Period = period, Data = new { ConfirmationRate = totalBookings > 0 ? Math.Round((decimal)confirmedBookings / totalBookings * 100, 1) : 0 } };
             }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException("Error retrieving booking volume dashboard data.", ex);
-            }
+            catch (Exception ex) { throw new InvalidOperationException("Error retrieving booking volume dashboard data.", ex); }
         }
 
-        public async Task<DashboardDataDto> GetCancellationDashboardAsync()
+        public async Task<DashboardDataDto> GetCancellationDashboardAsync(string filter)
         {
             try
             {
-                var currentMonth = DateTime.UtcNow.Month;
-                var currentYear = DateTime.UtcNow.Year;
-
-                var totalBookings = await _context.Bookings
-                    .AsNoTracking()
-                    .Where(b => b.CreatedDate.Month == currentMonth && b.CreatedDate.Year == currentYear)
+                var (from, to, period) = GetDateRange(filter);
+                var totalBookings = await _context.Bookings.AsNoTracking()
+                    .Where(b => b.CreatedDate >= from && b.CreatedDate <= to)
                     .CountAsync();
-
-                var cancelledBookings = await _context.Bookings
-                    .AsNoTracking()
-                    .Where(b => b.CreatedDate.Month == currentMonth &&
-                               b.CreatedDate.Year == currentYear &&
-                               b.Status == 3)
+                var cancelledBookings = await _context.Bookings.AsNoTracking()
+                    .Where(b => b.CreatedDate >= from && b.CreatedDate <= to && b.Status == 3)
                     .CountAsync();
-
-                return new DashboardDataDto
-                {
-                    Title = "Cancellation Dashboard",
-                    TotalAmount = cancelledBookings,
-                    TotalCount = totalBookings,
-                    Period = $"{currentYear}-{currentMonth:D2}",
-                    Data = new { CancellationRate = totalBookings > 0 ? (decimal)cancelledBookings / totalBookings * 100 : 0 }
-                };
+                return new DashboardDataDto { Title = "Cancellations", TotalAmount = cancelledBookings, TotalCount = totalBookings, Period = period, Data = new { CancellationRate = totalBookings > 0 ? Math.Round((decimal)cancelledBookings / totalBookings * 100, 1) : 0 } };
             }
-            catch (Exception ex)
+            catch (Exception ex) { throw new InvalidOperationException("Error retrieving cancellation dashboard data.", ex); }
+        }
+
+        public async Task<DashboardDataDto> GetAvgBookingValueDashboardAsync(string filter)
+        {
+            try
             {
-                throw new InvalidOperationException("Error retrieving cancellation dashboard data.", ex);
+                var (from, to, period) = GetDateRange(filter);
+                var avg = await _context.Bookings.AsNoTracking()
+                    .Where(b => b.CreatedDate >= from && b.CreatedDate <= to)
+                    .AverageAsync(b => (decimal?)b.Amount) ?? 0;
+                var count = await _context.Bookings.AsNoTracking()
+                    .Where(b => b.CreatedDate >= from && b.CreatedDate <= to)
+                    .CountAsync();
+                return new DashboardDataDto { Title = "Avg Booking Value", TotalAmount = Math.Round(avg, 2), TotalCount = count, Period = period, Data = new { } };
             }
+            catch (Exception ex) { throw new InvalidOperationException("Error retrieving avg booking value.", ex); }
+        }
+
+        public async Task<DashboardDataDto> GetTopSpendersDashboardAsync(string filter)
+        {
+            try
+            {
+                var (from, to, period) = GetDateRange(filter);
+                var topSpenders = await _context.Bookings.AsNoTracking()
+                    .Where(b => b.CreatedDate >= from && b.CreatedDate <= to)
+                    .GroupBy(b => b.UserId)
+                    .Select(g => new { UserId = g.Key, TotalSpend = g.Sum(b => b.Amount), BookingCount = g.Count() })
+                    .OrderByDescending(x => x.TotalSpend)
+                    .Take(5)
+                    .ToListAsync();
+                var uniqueSpenders = topSpenders.Count;
+                var totalSpend = topSpenders.Sum(x => x.TotalSpend);
+                return new DashboardDataDto { Title = "Top Spenders", TotalAmount = totalSpend, TotalCount = uniqueSpenders, Period = period, Data = topSpenders };
+            }
+            catch (Exception ex) { throw new InvalidOperationException("Error retrieving top spenders.", ex); }
+        }
+
+        public async Task<DashboardDataDto> GetRevenueByTypeDashboardAsync(string filter)
+        {
+            try
+            {
+                var (from, to, period) = GetDateRange(filter);
+                var byType = await _context.Bookings.AsNoTracking()
+                    .Where(b => b.CreatedDate >= from && b.CreatedDate <= to)
+                    .GroupBy(b => b.ItemType)
+                    .Select(g => new { ItemType = g.Key, Revenue = g.Sum(b => b.Amount), Count = g.Count() })
+                    .OrderByDescending(x => x.Revenue)
+                    .ToListAsync();
+                var totalRevenue = byType.Sum(x => x.Revenue);
+                return new DashboardDataDto { Title = "Revenue by Type", TotalAmount = totalRevenue, TotalCount = byType.Count, Period = period, Data = byType };
+            }
+            catch (Exception ex) { throw new InvalidOperationException("Error retrieving revenue by type.", ex); }
         }
 
         public async Task<TrendAnalysisDto> GetSpendPerTravelerTrendAsync()
@@ -280,6 +280,19 @@ namespace TravelEaseServer.Repository.Implementation
                 GeneratedDate = report.GeneratedDate,
                 ReportContent = report.ReportContent
             };
+        }
+
+        private static (DateTime from, DateTime to, string period) GetDateRange(string filter)
+        {
+            var now = DateTime.UtcNow;
+            if (filter == "week")
+            {
+                var startOfWeek = now.Date.AddDays(-(int)now.DayOfWeek);
+                return (startOfWeek, startOfWeek.AddDays(7).AddTicks(-1), $"Week of {startOfWeek:yyyy-MM-dd}");
+            }
+            var from = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var to = from.AddMonths(1).AddTicks(-1);
+            return (from, to, $"{now.Year}-{now.Month:D2}");
         }
     }
 }

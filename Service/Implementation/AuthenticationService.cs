@@ -7,8 +7,10 @@ using TravelEaseServer.Constant;
 using TravelEaseServer.Dto;
 using TravelEaseServer.Enum; // Added to reference UserRole enum
 using TravelEaseServer.Model;
+using TravelEaseServer.Repository.Implementation;
 using TravelEaseServer.Repository.Interface;
 using TravelEaseServer.Service.Interface;
+using Microsoft.AspNetCore.Http;
 
 namespace TravelEaseServer.Service.Implementation
 {
@@ -16,11 +18,15 @@ namespace TravelEaseServer.Service.Implementation
     {
         private readonly IAuthenticationRepository _authenticationRepository;
         private readonly IConfiguration _configuration;
+        private readonly IComplianceRepository _complianceRepository;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public AuthenticationService(IAuthenticationRepository authenticationRepository, IConfiguration configuration)
+        public AuthenticationService(IAuthenticationRepository authenticationRepository, IConfiguration configuration, IComplianceRepository complianceRepository, IHttpContextAccessor httpContextAccessor)
         {
             _authenticationRepository = authenticationRepository;
             _configuration = configuration;
+            _complianceRepository = complianceRepository;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task<LoginResponseDto> LoginAsync(LoginRequestDto loginDto)
@@ -39,17 +45,24 @@ namespace TravelEaseServer.Service.Implementation
 
             var user = await _authenticationRepository.AuthenticateUserAsync(loginDto.Email, loginDto.Password);
 
-            if (user == null)
-            {
-                throw new UnauthorizedAccessException("Invalid email or password.");
-            }
-
-            if (!user.IsActive)
-            {
-                throw new UnauthorizedAccessException("This account has been deactivated.");
-            }
+            if (user == null || !user.IsActive)
+                return null;
 
             var token = GenerateJwtToken(user);
+
+            var clientIp = _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString();
+            clientIp = (string.IsNullOrEmpty(clientIp) || clientIp == "::1") ? "127.0.0.1" : clientIp;
+            await _complianceRepository.LogAuditEventAsync(new AuditLog
+            {
+                UserId = user.UserId,
+                Action = "Login",
+                EntityType = "User",
+                EntityId = user.UserId,
+                OldValues = string.Empty,
+                NewValues = $"Email: {user.Email}",
+                Timestamp = DateTime.UtcNow,
+                IpAddress = clientIp
+            });
 
             return new LoginResponseDto
             {
@@ -66,7 +79,24 @@ namespace TravelEaseServer.Service.Implementation
             if (logoutDto == null)
                 return false;
 
-            return await _authenticationRepository.LogoutAsync(logoutDto.UserId);
+            var result = await _authenticationRepository.LogoutAsync(logoutDto.UserId);
+            if (result)
+            {
+                var clientIp = _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString();
+                clientIp = (string.IsNullOrEmpty(clientIp) || clientIp == "::1") ? "127.0.0.1" : clientIp;
+                await _complianceRepository.LogAuditEventAsync(new AuditLog
+                {
+                    UserId = logoutDto.UserId,
+                    Action = "Logout",
+                    EntityType = "User",
+                    EntityId = logoutDto.UserId,
+                    OldValues = string.Empty,
+                    NewValues = string.Empty,
+                    Timestamp = DateTime.UtcNow,
+                    IpAddress = clientIp
+                });
+            }
+            return result;
         }
 
         public async Task<bool> ResetPasswordAsync(PasswordResetDto resetDto)
@@ -78,8 +108,17 @@ namespace TravelEaseServer.Service.Implementation
             if (user == null)
                 return false;
 
-            var newHash = TravelEaseServer.Repository.Implementation.AuthenticationRepository.CreatePasswordHash(resetDto.NewPassword);
+            var newHash = AuthenticationRepository.CreatePasswordHash(resetDto.NewPassword);
             return await _authenticationRepository.UpdatePasswordAsync(user.UserId, newHash);
+        }
+
+        public async Task<bool> ForgotPasswordAsync(ForgotPasswordDto dto)
+        {
+            if (dto == null || string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.NewPassword))
+                return false;
+
+            var newHash = AuthenticationRepository.CreatePasswordHash(dto.NewPassword);
+            return await _authenticationRepository.ForgotPasswordAsync(dto.Email, newHash);
         }
 
         public Task<bool> ValidateTokenAsync(string token)

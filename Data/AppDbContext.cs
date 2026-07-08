@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     public DbSet<AuditLog> AuditLogs { get; set; }
     public DbSet<Partner> Partners { get; set; }
     public DbSet<Inventory> Inventories { get; set; }
+    public DbSet<InventoryMedia> InventoryMedia { get; set; }
     public DbSet<Booking> Bookings { get; set; }
     public DbSet<Reservation> Reservations { get; set; }
     public DbSet<Itinerary> Itineraries { get; set; }
@@ -53,6 +54,12 @@ public class AppDbContext : DbContext
         .HasOne(i => i.Partner)
         .WithMany(p => p.Inventories)
         .HasForeignKey(i => i.PartnerId);
+
+    modelBuilder.Entity<InventoryMedia>()
+        .HasOne(m => m.Inventory)
+        .WithMany(i => i.Media)
+        .HasForeignKey(m => m.InventoryId)
+        .OnDelete(DeleteBehavior.Cascade);
 
     modelBuilder.Entity<Reservation>()
         .HasOne(r => r.Booking)

@@ -15,6 +15,6 @@ namespace TravelEaseServer.Model
         public DateTime Timestamp { get; set; }
         public required string IpAddress { get; set; }
 
-        public virtual required User User { get; set; }
+        public virtual User? User { get; set; }
     }
 }

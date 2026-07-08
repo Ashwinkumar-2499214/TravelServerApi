@@ -114,11 +114,7 @@ public class InventoryController : ControllerBase
         int status;
         if (dto.Status.HasValue)
         {
-            status = dto.Status.Value;
-            if (status <= 0)
-            {
-                return BadRequest(new { message = GeneralConstants.InvalidInput });
-            }
+            status = (int)dto.Status.Value;
         }
         else
         {
@@ -128,11 +124,7 @@ public class InventoryController : ControllerBase
                 return NotFound(new { message = InventoryConstants.InventoryNotFound });
             }
 
-            status = existing.Status;
-            if (status <= 0)
-            {
-                return BadRequest(new { message = GeneralConstants.InvalidInput });
-            }
+            status = (int)existing.Status;
         }
 
         var data = await _inventoryService.UpdateAvailabilityAsync(inventoryId, dto.NewAvailability, status);
@@ -140,5 +132,29 @@ public class InventoryController : ControllerBase
         return data != null
             ? Ok(new { message = InventoryConstants.AvailabilityUpdateSuccess, data })
             : NotFound(new { message = InventoryConstants.InventoryNotFound });
+    }
+
+    [HttpPost("/api/v1/partners/{partnerId}/inventory/{inventoryId}/media")]
+    [Authorize(Roles = "Admin,TravelAgent")]
+    public async Task<IActionResult> UploadMedia(long partnerId, long inventoryId, IFormFile file)
+    {
+        if (partnerId <= 0 || inventoryId <= 0 || file == null || file.Length == 0)
+            return BadRequest(new { message = GeneralConstants.InvalidInput });
+
+        var data = await _inventoryService.AddMediaAsync(inventoryId, file);
+        return Ok(new { message = "Media uploaded successfully", data });
+    }
+
+    [HttpDelete("/api/v1/inventory/{inventoryId}/media/{mediaId}")]
+    [Authorize(Roles = "Admin,TravelAgent")]
+    public async Task<IActionResult> DeleteMedia(long inventoryId, long mediaId)
+    {
+        if (inventoryId <= 0 || mediaId <= 0)
+            return BadRequest(new { message = GeneralConstants.InvalidInput });
+
+        var result = await _inventoryService.DeleteMediaAsync(mediaId);
+        return result
+            ? Ok(new { message = "Media deleted successfully" })
+            : NotFound(new { message = "Media not found" });
     }
 }

@@ -18,10 +18,33 @@ namespace TravelEaseServer.Controllers
             _notificationService = notificationService;
         }
 
+    
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllNotifications([FromQuery] NotificationSearchDto searchDto)
+        {
+            if (searchDto == null)
+            {
+                searchDto = new NotificationSearchDto { PageNumber = 1, PageSize = 10 };
+            }
+
+            var notifications = await _notificationService.GetAllNotificationsAsync(searchDto);
+            return Ok(new { message = GeneralConstants.OperationSuccess, data = notifications });
+        }
+
+     
         [HttpGet("~/api/v1/users/{userId}/notifications")]
-        [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager,Traveler")]
+        [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager,Traveler,FinanceOfficer,ComplianceOfficer")]
         public async Task<IActionResult> GetUserNotifications([FromRoute] long userId)
         {
+            var currentUserIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (!long.TryParse(currentUserIdClaim, out var currentUserId))
+                return Unauthorized(new { message = GeneralConstants.UnauthorizedAccess });
+
+            if (!User.IsInRole("Admin") && currentUserId != userId)
+                return Forbid();
+
             var notifications = await _notificationService.GetUserNotificationsAsync(userId);
             return Ok(new { message = GeneralConstants.OperationSuccess, data = notifications });
         }
@@ -40,7 +63,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpGet("{notificationId:long}")]
-        [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager,Traveler")]
+        [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager,Traveler,FinanceOfficer,ComplianceOfficer")]
         public async Task<IActionResult> GetNotificationById([FromRoute] long notificationId)
         {
             var notification = await _notificationService.GetNotificationByIdAsync(notificationId);
@@ -48,7 +71,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpDelete("{notificationId:long}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager,Traveler,FinanceOfficer,ComplianceOfficer")]
         public async Task<IActionResult> DeleteNotification([FromRoute] long notificationId)
         {
             var isDeleted = await _notificationService.DeleteNotificationAsync(notificationId);
@@ -61,7 +84,7 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpPatch("{notificationId:long}/read")]
-        [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager,Traveler")]
+        [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager,Traveler,FinanceOfficer,ComplianceOfficer")]
         public async Task<IActionResult> MarkAsRead([FromRoute] long notificationId)
         {
             var result = await _notificationService.MarkAsReadAsync(notificationId);
@@ -74,9 +97,17 @@ namespace TravelEaseServer.Controllers
         }
 
         [HttpPatch("~/api/v1/users/{userId}/notifications/read-all")]
-        [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager,Traveler")]
+        [Authorize(Roles = "Admin,TravelAgent,CorporateTravelManager,Traveler,FinanceOfficer,ComplianceOfficer")]
         public async Task<IActionResult> MarkAllAsRead([FromRoute] long userId)
         {
+            var currentUserIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (!long.TryParse(currentUserIdClaim, out var currentUserId))
+                return Unauthorized(new { message = GeneralConstants.UnauthorizedAccess });
+
+            if (!User.IsInRole("Admin") && currentUserId != userId)
+                return Forbid();
+
             var isSuccess = await _notificationService.MarkAllAsReadAsync(userId);
             if (!isSuccess)
             {

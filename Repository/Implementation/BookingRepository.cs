@@ -20,6 +20,7 @@ namespace TravelEaseServer.Repository.Implementation
             {
                 _context.Bookings.Add(booking);
                 await _context.SaveChangesAsync();
+                await _context.Entry(booking).Reference(b => b.User).LoadAsync();
                 return MapBookingToDto(booking);
             }
             catch (DbUpdateException ex)
@@ -35,6 +36,7 @@ namespace TravelEaseServer.Repository.Implementation
             {
                 var booking = await _context.Bookings
                     .AsNoTracking()
+                    .Include(b => b.User)
                     .FirstOrDefaultAsync(b => b.BookingId == bookingId);
 
                 return booking != null ? MapBookingToDto(booking) : null;
@@ -49,7 +51,7 @@ namespace TravelEaseServer.Repository.Implementation
         {
             try
             {
-                var query = _context.Bookings.AsNoTracking();
+                var query = _context.Bookings.AsNoTracking().Include(b => b.User).AsQueryable();
 
                 // Apply filters
                 if (searchDto.UserId.HasValue)
@@ -99,6 +101,7 @@ namespace TravelEaseServer.Repository.Implementation
             {
                 var bookings = await _context.Bookings
                     .AsNoTracking()
+                    .Include(b => b.User)
                     .Where(b => b.UserId == userId)
                     .OrderByDescending(b => b.BookingDate)
                     .ToListAsync();
@@ -115,7 +118,9 @@ namespace TravelEaseServer.Repository.Implementation
         {
             try
             {
-                var existingBooking = await _context.Bookings.FirstOrDefaultAsync(b => b.BookingId == booking.BookingId);
+                var existingBooking = await _context.Bookings
+                    .Include(b => b.User)
+                    .FirstOrDefaultAsync(b => b.BookingId == booking.BookingId);
                 if (existingBooking == null)
                 {
                     throw new KeyNotFoundException($"Booking with ID {booking.BookingId} not found.");
@@ -162,7 +167,9 @@ namespace TravelEaseServer.Repository.Implementation
         {
             try
             {
-                var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.BookingId == bookingId);
+                var booking = await _context.Bookings
+                    .Include(b => b.User)
+                    .FirstOrDefaultAsync(b => b.BookingId == bookingId);
                 if (booking == null)
                 {
                     throw new KeyNotFoundException($"Booking with ID {bookingId} not found.");
@@ -188,6 +195,7 @@ namespace TravelEaseServer.Repository.Implementation
             {
                 BookingId = booking.BookingId,
                 UserId = booking.UserId,
+                UserName = booking.User?.Name ?? string.Empty,
                 PartnerId = booking.PartnerId,
                 InventoryId = booking.InventoryId,
                 ItemType = booking.ItemType,

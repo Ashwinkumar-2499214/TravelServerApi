@@ -15,13 +15,15 @@ namespace TravelEaseServer.Tests.Controllers
     public class PaymentsControllerTests
     {
         private Mock<IPaymentService> _mockPaymentService;
+        private Mock<INotificationService> _mockNotificationService;
         private PaymentsController _controller;
  
         [SetUp]
         public void Setup()
         {
             _mockPaymentService = new Mock<IPaymentService>();
-            _controller = new PaymentsController(_mockPaymentService.Object);
+            _mockNotificationService = new Mock<INotificationService>();
+            _controller = new PaymentsController(_mockPaymentService.Object, _mockNotificationService.Object);
             _controller.ModelState.Clear();
         }
  

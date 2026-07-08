@@ -12,5 +12,7 @@ namespace TravelEaseServer.Repository.Interface
         Task<InventoryResponseDto> UpdateInventoryAsync(Inventory inventory);
         Task<bool> DeleteInventoryAsync(long inventoryId);
         Task<InventoryResponseDto> UpdateAvailabilityAsync(long inventoryId, int availability, int status);
+        Task<InventoryMediaDto> AddMediaAsync(long inventoryId, InventoryMedia media);
+        Task<bool> DeleteMediaAsync(long mediaId);
     }
 }
